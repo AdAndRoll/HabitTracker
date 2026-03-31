@@ -19,14 +19,13 @@ export const HabitCard = ({
 }: Props) => {
 
   const handleToggle = () => {
-    if (isFuture) return;
-
+    // УБИРАЕМ ЗДЕСЬ if (isFuture) return;
+    // Пусть проверку делает MainScreen, чтобы показать Alert
+    
     if (Platform.OS !== 'web') {
       try {
         Vibration.vibrate(10); 
-      } catch (err) {
-        console.warn('Vibration skipped:', err);
-      }
+      } catch (err) {}
     }
     
     onToggle();

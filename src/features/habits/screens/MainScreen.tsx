@@ -39,6 +39,20 @@ export const MainScreen = () => {
     );
   };
 
+  /**
+   * Обработка переключения привычки с проверкой на будущее
+   */
+  const handleToggle = (id: string) => {
+    if (isFuture) {
+      Alert.alert(
+        'Рановато!', 
+        'Нельзя отмечать привычки на будущие даты ⏳'
+      );
+      return;
+    }
+    toggleHabit(id);
+  };
+
   const ListEmptyComponent = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>🌿</Text>
@@ -71,8 +85,8 @@ export const MainScreen = () => {
               isCompleted={isCompleted}
               isToday={isToday}
               isFuture={isFuture}
-              // Действия
-              onToggle={() => toggleHabit(item.id)}
+              // Используем новую функцию-обертку вместо прямого toggleHabit
+              onToggle={() => handleToggle(item.id)}
               onLongPress={() => navigation.navigate('HabitDetails', { habitId: item.id })}
               onEdit={() => navigation.navigate('EditHabit', { habitId: item.id })}
               onDelete={() => confirmDelete(item.id, item.title)}
