@@ -2,11 +2,14 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { clientStorage, Habit } from '../core';
 
+type HabitUpdate = Partial<Omit<Habit, 'id' | 'createdAt' | 'completedDays'>>;
+
 interface HabitState {
   habits: Habit[];
-  addHabit: (title: string, emoji: string, color: string) => void;
+  addHabit: (title: string, emoji: string, color: string, description?: string) => void;
   removeHabit: (id: string) => void;
   toggleHabit: (id: string, date: string) => void;
+  updateHabit: (id: string, updates: HabitUpdate) => void;
 }
 
 export const useHabitStore = create<HabitState>()(
@@ -14,50 +17,58 @@ export const useHabitStore = create<HabitState>()(
     (set) => ({
       habits: [],
 
-      addHabit: (title, emoji, color) => {
-        // Базовая валидация на уровне стора (защита "от дурака")
-        if (!title.trim()) return;
+      addHabit: (title, emoji, color, description) => {
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) return;
 
-        try {
-          set((state) => ({
-            habits: [
-              ...state.habits,
-              {
-                id: Date.now().toString(),
-                title: title.trim(),
-                emoji,
-                color,
-                completedDays: [],
-                createdAt: Date.now(),
-              },
-            ],
-          }));
-        } catch (error) {
-          // Логируем ошибку для дебага
-          console.error('Zustand: Failed to add habit', error);
-          // Пробрасываем ошибку дальше, чтобы UI мог её поймать
-          throw new Error('Storage write error');
-        }
+        set((state) => ({
+          habits: [
+            ...state.habits,
+            {
+              id: Date.now().toString(),
+              title: trimmedTitle,
+              description: description?.trim(),
+              emoji: emoji,
+              color: color,
+              completedDays: [],
+              createdAt: Date.now(),
+            },
+          ],
+        }));
       },
 
-      removeHabit: (id) =>
+      updateHabit: (id, updates) => {
+        set((state) => ({
+          habits: state.habits.map((h) => 
+            h.id === id ? { ...h, ...updates } : h
+          ),
+        }));
+      },
+
+      removeHabit: (id) => {
         set((state) => ({
           habits: state.habits.filter((h) => h.id !== id),
-        })),
+        }));
+      },
 
-      toggleHabit: (id, date) =>
+      toggleHabit: (id, date) => {
         set((state) => ({
           habits: state.habits.map((h) => {
             if (h.id !== id) return h;
-            const isCompleted = h.completedDays.includes(date);
+            
+            const currentDays = h.completedDays || [];
+            const isCompleted = currentDays.includes(date);
+            const newDays = isCompleted
+              ? currentDays.filter((d) => d !== date)
+              : [...currentDays, date];
+              
             return {
               ...h,
-              completedDays: isCompleted
-                ? h.completedDays.filter((d) => d !== date)
-                : [...h.completedDays, date],
+              completedDays: newDays,
             };
           }),
-        })),
+        }));
+      },
     }),
     {
       name: 'habit-storage',

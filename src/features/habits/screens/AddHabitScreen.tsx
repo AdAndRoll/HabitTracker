@@ -19,17 +19,16 @@ import { EMOJIS, COLORS } from '../../../shared/constants';
 export const AddHabitScreen = () => {
   const navigation = useNavigation();
   
-  // Достаем стейт и экшен из стора
   const { addHabit, habits } = useHabitStore();
 
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState(''); // Новое состояние
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
+  
   const trimmedTitle = title.trim();
 
   const handleSave = () => {
-   
-
     // 1. Валидация на пустоту
     if (trimmedTitle.length === 0) {
       return;
@@ -49,13 +48,12 @@ export const AddHabitScreen = () => {
       return;
     }
 
-    // 3. Обработка сохранения с отловом ошибок записи (Error Handling)
+    // 3. Обработка сохранения
     try {
-      // Вызов addHabit может выбросить исключение, если в сторе прописан throw
-      addHabit(trimmedTitle, selectedEmoji, selectedColor);
+      // Теперь передаем и описание (оно может быть пустым)
+      addHabit(trimmedTitle, selectedEmoji, selectedColor, description.trim());
       navigation.goBack(); 
     } catch (error) {
-      // Пограничный случай: Ошибки записи в MMKV/память
       Alert.alert(
         'Ошибка сохранения', 
         'Не удалось сохранить данные. Убедитесь, что на устройстве достаточно свободного места.'
@@ -102,10 +100,23 @@ export const AddHabitScreen = () => {
             placeholderTextColor={theme.colors.textSecondary}
             value={title}
             onChangeText={setTitle}
-            maxLength={25} // Ограничение длины строки
-            autoFocus={true} // Сразу открываем клавиатуру
-            returnKeyType="done"
-            onSubmitEditing={handleSave}
+            maxLength={25}
+            autoFocus={true}
+            returnKeyType="next" // Меняем на "далее", так как есть следующее поле
+          />
+
+          {/* Description Input */}
+          <Text style={styles.label}>ОПИСАНИЕ (НЕОБЯЗАТЕЛЬНО)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Зачем вам эта привычка?"
+            placeholderTextColor={theme.colors.textSecondary}
+            value={description}
+            onChangeText={setDescription}
+            maxLength={100}
+            multiline={true}
+            numberOfLines={3}
+            blurOnSubmit={true}
           />
 
           {/* Emoji Selector */}
@@ -201,6 +212,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     borderWidth: 1,
     borderColor: theme.colors.border
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top', // Важно для Android, чтобы текст начинался сверху
+    paddingTop: spacing.md
   },
   row: { marginBottom: spacing.xl },
   emojiBtn: {

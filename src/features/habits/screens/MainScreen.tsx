@@ -1,12 +1,12 @@
 import React from 'react';
-import { StyleSheet, FlatList, SafeAreaView, View, Text } from 'react-native';
+import { StyleSheet, FlatList, SafeAreaView, View, Text, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Header, HabitCard, FloatingButton } from '../../../shared/components';
 import { theme, spacing } from '../../../shared/theme';
 import { useHabits } from '../hooks/useHabits';
-import { RootStackParamList } from '../../../navigation/RootNavigator';
+import { RootStackParamList } from '../../../navigation/types';
 
 export const MainScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -21,7 +21,24 @@ export const MainScreen = () => {
     isFuture
   } = useHabits();
 
-  // Выносим пустой список в отдельный компонент для чистоты рендера
+  /**
+   * Подтверждение удаления
+   */
+  const confirmDelete = (id: string, title: string) => {
+    Alert.alert(
+      'Удаление',
+      `Вы уверены, что хотите удалить привычку "${title}"?`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        { 
+          text: 'Удалить', 
+          onPress: () => removeHabit(id), 
+          style: 'destructive' 
+        },
+      ]
+    );
+  };
+
   const ListEmptyComponent = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>🌿</Text>
@@ -43,11 +60,9 @@ export const MainScreen = () => {
         data={habits}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        // Подключаем проработанный Empty State
         ListEmptyComponent={ListEmptyComponent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
-          // Проверяем, выполнена ли привычка именно в выбранный день
           const isCompleted = item.completedDays.includes(selectedDate);
           
           return (
@@ -56,8 +71,11 @@ export const MainScreen = () => {
               isCompleted={isCompleted}
               isToday={isToday}
               isFuture={isFuture}
+              // Действия
               onToggle={() => toggleHabit(item.id)}
-              onDelete={() => removeHabit(item.id)} 
+              onLongPress={() => navigation.navigate('HabitDetails', { habitId: item.id })}
+              onEdit={() => navigation.navigate('EditHabit', { habitId: item.id })}
+              onDelete={() => confirmDelete(item.id, item.title)}
             />
           );
         }}
@@ -77,7 +95,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
-    // Большой отступ снизу, чтобы FloatingButton не перекрывал последнюю карточку
     paddingBottom: 160, 
     flexGrow: 1,
   },

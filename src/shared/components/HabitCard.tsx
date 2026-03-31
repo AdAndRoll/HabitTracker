@@ -1,7 +1,5 @@
-// src/shared/components/HabitCard.tsx
-
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Vibration, Platform } from 'react-native';
 import { Habit } from '../../core';
 import { theme, spacing, borderRadius } from '../theme';
 
@@ -11,71 +9,80 @@ interface Props {
   isToday: boolean;
   isFuture: boolean;
   onToggle: () => void;
+  onLongPress: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
 export const HabitCard = ({ 
-  habit, 
-  isCompleted, 
-  isToday, 
-  isFuture, 
-  onToggle, 
-  onDelete 
+  habit, isCompleted, isToday, isFuture, onToggle, onLongPress, onEdit, onDelete 
 }: Props) => {
 
-  // Динамический текст статуса в зависимости от контекста времени
-  const getStatusText = () => {
-    if (isFuture) return '⏳ Нельзя отметить будущее';
-    if (isCompleted) {
-      return isToday ? '🔥 Выполнено сегодня' : '✅ Было выполнено';
+  const handleToggle = () => {
+    if (isFuture) return;
+
+    if (Platform.OS !== 'web') {
+      try {
+        Vibration.vibrate(10); 
+      } catch (err) {
+        console.warn('Vibration skipped:', err);
+      }
     }
-    return isToday ? '⚪️ Нажми, чтобы отметить' : '❌ Не выполнено';
+    
+    onToggle();
   };
+
+  // Вычисляем цвет заранее, чтобы не ломать парсер Hermes интерполяцией в стилях
+  const colorString = habit.color || '#000000';
+  const iconBgColor = colorString.startsWith('#') ? colorString + '15' : 'rgba(0,0,0,0.1)';
 
   return (
     <View style={[
       styles.card, 
-      { borderLeftColor: habit.color },
-      (isCompleted || isFuture) && styles.completedCard // Визуально приглушаем неактивные/выполненные
+      { borderLeftColor: colorString },
+      (isCompleted || isFuture) ? styles.completedCard : null
     ]}>
+      
       <TouchableOpacity 
-        style={styles.mainArea} 
-        onPress={onToggle}
-        activeOpacity={0.7} 
-        disabled={isFuture} // Блокируем клик, если дата в будущем
+        style={styles.mainTouchable}
+        onPress={handleToggle}
+        onLongPress={onLongPress}
+        delayLongPress={500}
+        activeOpacity={0.7}
       >
-        {/* Иконка с подложкой цвета привычки (прозрачность 20% - 33 в hex) */}
-        <View style={[styles.iconContainer, { backgroundColor: `${habit.color}33` }]}>
-          <Text style={styles.emoji}>{habit.emoji}</Text>
+        <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
+          <Text style={[styles.emoji, isCompleted ? styles.completedEmoji : null]}>
+            {isCompleted ? '✅' : habit.emoji}
+          </Text>
         </View>
-        
+
         <View style={styles.info}>
-          <Text 
-            numberOfLines={1}
-            style={[
-              styles.title, 
-              isCompleted && styles.completedTitle
-            ]}
-          >
+          <Text numberOfLines={1} style={[styles.title, isCompleted ? styles.completedTitle : null]}>
             {habit.title}
           </Text>
-          <Text style={[
-            styles.statusText,
-            isFuture && { color: theme.colors.textSecondary }
-          ]}>
-            {getStatusText()}
+          <Text style={styles.statusText}>
+            {isFuture ? '⏳ Ожидание' : (isCompleted ? '🔥 Выполнено!' : '🎯 Нажми, чтобы отметить')}
           </Text>
         </View>
       </TouchableOpacity>
 
-      {/* Кнопка удаления */}
-      <TouchableOpacity 
-        onPress={onDelete} 
-        style={styles.deleteBtn}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Увеличиваем область нажатия
-      >
-        <Text style={styles.deleteIcon}>🗑️</Text>
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity 
+          onPress={onEdit} 
+          style={styles.actionBtn} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.actionIcon}>✏️</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          onPress={onDelete} 
+          style={styles.actionBtn} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={[styles.actionIcon, { opacity: 0.4 }]}>🗑️</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -84,25 +91,27 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: borderRadius.lg,
-    padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
     borderLeftWidth: 5,
-    // Тени для объема
+    height: 80,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 5,
+    elevation: 2,
+    overflow: 'hidden',
   },
   completedCard: {
-    opacity: 0.7, // Приглушаем карточку
+    opacity: 0.85,
   },
-  mainArea: {
+  mainTouchable: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingLeft: spacing.sm,
+    height: '100%',
   },
   iconContainer: {
     width: 48,
@@ -110,35 +119,40 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.sm,
   },
-  emoji: { 
-    fontSize: 24 
+  info: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  info: { 
-    flex: 1 
-  },
+  emoji: { fontSize: 24 },
+  completedEmoji: { fontSize: 20 },
   title: { 
-    fontSize: 17, 
+    fontSize: 16, 
     fontWeight: '700', 
     color: theme.colors.text 
   },
   completedTitle: { 
     textDecorationLine: 'line-through', 
-    color: theme.colors.textSecondary,
+    color: theme.colors.textSecondary 
   },
   statusText: { 
-    fontSize: 13, 
+    fontSize: 11, 
     color: theme.colors.textSecondary, 
-    marginTop: spacing.xs,
-    fontWeight: '500'
+    marginTop: 2 
   },
-  deleteBtn: { 
+  actions: {
+    flexDirection: 'row',
+    paddingRight: spacing.sm,
+    height: '100%',
+    alignItems: 'center',
+  },
+  actionBtn: {
     padding: spacing.sm,
-    marginLeft: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  deleteIcon: {
-    fontSize: 18,
-    opacity: 0.3
+  actionIcon: {
+    fontSize: 16,
   }
 });

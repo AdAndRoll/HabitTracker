@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar, useColorScheme } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
-// Добавляем /src/ к путям
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { lightTheme, darkTheme } from './src/shared/theme';
+import { initCalendarLocale } from './src/shared/lib/calendarConfig';
 
 const App = () => {
-  // Определяем системную тему
   const isDarkMode = useColorScheme() === 'dark';
   const activeTheme = isDarkMode ? darkTheme : lightTheme;
+
+  useEffect(() => {
+    // Инициализация происходит строго после загрузки основного контекста React
+    initCalendarLocale();
+  }, []);
 
   return (
     <NavigationContainer theme={activeTheme}>
