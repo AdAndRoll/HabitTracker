@@ -14,7 +14,6 @@ export const useHabits = () => {
   const isFuture = selectedDate > todayStr;
   const isToday = selectedDate === todayStr;
 
-  // Вживляем логику фильтрации
   const filteredHabits = useMemo(() => {
     return habits.filter((habit) => {
       const isDone = habit.completedDays.includes(selectedDate);
@@ -26,7 +25,7 @@ export const useHabits = () => {
   }, [habits, selectedDate, filter]);
 
   return {
-    habits: filteredHabits, // Теперь отдаем отфильтрованные
+    habits: filteredHabits,
     allHabitsCount: habits.length,
     selectedDate,
     setSelectedDate,

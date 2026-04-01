@@ -4,7 +4,6 @@ export const storage = createMMKV({
   id: 'habit-tracker-storage',
 });
 
-// Хелпер для интеграции с внешними библиотеками (например, Zustand)
 export const clientStorage = {
   setItem: (key: string, value: string) => storage.set(key, value),
   getItem: (key: string) => storage.getString(key) ?? null,

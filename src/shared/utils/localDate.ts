@@ -9,7 +9,6 @@ export const getLocalDateString = (date: Date): string => {
 
 /**
  * Форматирует часы и минуты в строку 'HH:mm' для отображения и стора.
- * Пример: 9, 5 => "09:05"
  */
 export const formatTime = (hour: number, minute: number): string => {
   return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
@@ -17,7 +16,6 @@ export const formatTime = (hour: number, minute: number): string => {
 
 /**
  * Парсит строку времени 'HH:mm' обратно в числа.
- * Полезно, если нужно достать часы/минуты из стора для NotificationService.
  */
 export const parseTimeString = (timeString: string) => {
   const [hour, minute] = timeString.split(':').map(Number);

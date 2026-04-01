@@ -22,10 +22,10 @@ export interface AppTheme extends Theme {
   colors: Theme['colors'] & {
     surface: string;
     textSecondary: string;
-    textMuted: string;      // Для подсказок типа "нажми чтобы..."
+    textMuted: string;
     error: string;
     staticWhite: string;
-    completedOpacity: number; // Семантический токен для выполненных задач
+    completedOpacity: number;
   };
 }
 
@@ -44,7 +44,7 @@ export const lightTheme: AppTheme = {
     error: palette.red,
     staticWhite: palette.white, 
     notification: palette.red,
-    completedOpacity: 0.6, // В светлой теме можно сильнее приглушать
+    completedOpacity: 0.6,
   },
 };
 
@@ -57,15 +57,13 @@ export const darkTheme: AppTheme = {
     background: palette.black, 
     surface: palette.slate850, 
     text: palette.slate50,
-    // Используем slate400, чтобы вторичный текст был читаемым
     textSecondary: palette.slate400, 
-    // Текст подсказок в темноте должен быть еще светлее для контраста
     textMuted: palette.slate50, 
     border: palette.slate700,
     error: palette.red,
     staticWhite: palette.white, 
     notification: palette.red,
-    completedOpacity: 0.85, // В темной теме оставляем высокую непрозрачность
+    completedOpacity: 0.85,
   },
 };
 

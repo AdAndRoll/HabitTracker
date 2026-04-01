@@ -4,7 +4,6 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useTheme } from '@react-navigation/native';
 
 import { Habit } from '../../core';
-// Импортируем токены и тип из единого индекса темы
 import { spacing, borderRadius, type AppTheme } from '../theme';
 
 interface Props {
@@ -48,7 +47,6 @@ export const HabitCard = ({
   };
 
   const colorString = habit.color || colors.primary;
-  // Фон иконки теперь автоматически адаптируется (прозрачность чуть выше в темной теме для сочности)
   const iconBgOpacity = dark ? '40' : '15'; 
   const iconBgColor = `${colorString}${iconBgOpacity}`;
 
@@ -58,7 +56,6 @@ export const HabitCard = ({
       { 
         backgroundColor: colors.surface, 
         borderLeftColor: colorString,
-        // Тонкий бордер только в темной теме для разделения карточек
         borderWidth: dark ? 1 : 0,
         borderColor: colors.border
       },
@@ -143,7 +140,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderLeftWidth: 5,
     height: 80,
-    // Статичные тени (в темной теме их "поддержит" бордер)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,

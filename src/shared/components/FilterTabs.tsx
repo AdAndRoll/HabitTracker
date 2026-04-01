@@ -31,8 +31,6 @@ export const FilterTabs = ({ activeFilter, onChange }: Props) => {
               styles.tab, 
               isActive && { 
                 backgroundColor: colors.primary,
-                // Добавляем тень только для активного таба и только в темной теме
-                // В светлой теме основной цвет и так дает достаточный акцент
                 ...(dark && styles.activeShadow) 
               }
             ]}
@@ -67,7 +65,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: borderRadius.md,
-    // Убрали общие тени отсюда
   },
   activeShadow: {
     ...Platform.select({

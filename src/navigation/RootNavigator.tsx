@@ -21,10 +21,10 @@ export const RootNavigator = () => {
         animation: 'slide_from_right', 
       }}
     >
-      {/* Главный экран */}
+      {/* Главный экран*/}
       <Stack.Screen name="Main" component={MainScreen} />
       
-      {/* Добавление — Модалка */}
+      {/* Добавление*/}
       <Stack.Screen 
         name="AddHabit" 
         component={AddHabitScreen} 
@@ -34,16 +34,16 @@ export const RootNavigator = () => {
         }} 
       />
 
-      {/* ЭКРАН ДЕТАЛЕЙ — теперь реальный компонент */}
+      {/* ЭКРАН ДЕТАЛЕЙ*/}
       <Stack.Screen 
         name="HabitDetails" 
         component={HabitDetailsScreen} 
         options={{
-            animation: 'slide_from_right' // Детали обычно открываются сбоку
+            animation: 'slide_from_right'
         }}
       />
 
-      {/* Редактирование — Модалка */}
+      {/* Редактирование*/}
       <Stack.Screen 
         name="EditHabit" 
         component={EditHabitScreen} 

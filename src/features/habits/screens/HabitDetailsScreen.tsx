@@ -65,12 +65,11 @@ export const HabitDetailsScreen = () => {
       todayTextColor: colors.primary,
       textTodayFontWeight: '900' as const,
       selectedDayTextColor: colors.staticWhite,
-      textDisabledColor: dark ? '#444' : '#ccc', // Кастомный приглушенный цвет для дат вне месяца
+      textDisabledColor: dark ? '#444' : '#ccc',
       monthTextColor: colors.text,
       textMonthFontWeight: '800' as const, 
       textDayHeaderFontWeight: '600' as const,
       arrowColor: mainColor,
-      // Стили для названий дней (Пн, Вт...)
       textSectionTitleDisabledColor: colors.textMuted,
     };
   }, [habit?.color, colors, dark]);
@@ -78,7 +77,6 @@ export const HabitDetailsScreen = () => {
   if (!habit || !stats) return null;
 
   const mainColor = habit.color;
-  // В темной теме делаем подложку карточек чуть ярче (30 вместо 15), чтобы цвет читался
   const opacity = dark ? '30' : '15';
   const statBgColor = `${mainColor}${opacity}`;
 
@@ -134,7 +132,7 @@ export const HabitDetailsScreen = () => {
         
         <View style={[styles.calendarWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Calendar
-            key={dark ? 'dark' : 'light'} // CRITICAL: Перерисовывает календарь при смене темы
+            key={dark ? 'dark' : 'light'}
             markedDates={markedDates}
             onDayPress={handleDayPress}
             theme={calendarTheme}

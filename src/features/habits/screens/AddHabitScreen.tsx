@@ -13,14 +13,13 @@ import {
 } from 'react-native';
 import { useNavigation, useTheme } from '@react-navigation/native';
 
-// Импортируем токены через индекс темы
 import { spacing, borderRadius, type AppTheme } from '../../../shared/theme';
 import { EMOJIS, COLORS } from '../../../shared/constants';
 import { useHabitActions } from '../hooks/useHabitActions';
 
 export const AddHabitScreen = () => {
   const navigation = useNavigation();
-  const { colors, dark } = useTheme() as AppTheme; // Подключаем тему
+  const { colors, dark } = useTheme() as AppTheme;
   const { createNewHabit } = useHabitActions();
 
   const [title, setTitle] = useState('');

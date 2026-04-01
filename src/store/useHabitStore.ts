@@ -47,7 +47,6 @@ export const useHabitStore = create<HabitState>()(
             if (h.id !== id) return h;
             const updatedHabit = { ...h, ...updates };
 
-            // Если обновилось название и уведомления включены — пересоздаем их
             if (updates.title && updatedHabit.isReminderEnabled && updatedHabit.reminderTime) {
               const { hour, minute } = parseTimeString(updatedHabit.reminderTime);
               NotificationService.scheduleHabitReminder(id, updatedHabit.title, hour, minute);

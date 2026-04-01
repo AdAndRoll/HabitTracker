@@ -3,13 +3,12 @@ import { NotificationService } from '../services/NotificationService';
 import { formatTime } from '../../../shared/utils/localDate';
 
 export const useHabitActions = () => {
-  // Используем селекторы для оптимизации
   const habits = useHabitStore((state) => state.habits);
   const addHabit = useHabitStore((state) => state.addHabit);
   const updateHabit = useHabitStore((state) => state.updateHabit);
   const updateReminder = useHabitStore((state) => state.updateReminder);
   const removeHabitStore = useHabitStore((state) => state.removeHabit);
-  const toggleHabitStore = useHabitStore((state) => state.toggleHabit); // Достаем метод переключения
+  const toggleHabitStore = useHabitStore((state) => state.toggleHabit);
 
   /**
    * Валидация названия на дубликаты
@@ -55,7 +54,7 @@ export const useHabitActions = () => {
   };
 
   /**
-   * Установка напоминания: стор + системный сервис
+   * Установка напоминания
    */
   const setHabitReminder = async (habitId: string, title: string, hour: number, minute: number) => {
     const timeString = formatTime(hour, minute);

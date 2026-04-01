@@ -11,9 +11,6 @@ import { getNextTriggerDate } from '../../../shared/utils/localDate';
 export const HABIT_CHANNEL_ID = 'habit_reminders';
 
 export const NotificationService = {
-  /**
-   * Внутренний метод для проверки прав на алармы (Android)
-   */
   async _checkAndroidAlarmPermission(): Promise<boolean> {
     if (Platform.OS !== 'android') return true;
 
@@ -21,7 +18,6 @@ export const NotificationService = {
     if (settings.android.alarm !== AndroidNotificationSetting.ENABLED) {
       console.warn('[NotificationService] No Exact Alarm permission');
       try {
-        // Оставляем твой хардкод, раз пакет менять не хотим
         await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM', [
           { key: 'package', value: 'com.habittracker' } 
         ]);
@@ -46,13 +42,10 @@ export const NotificationService = {
   },
 
   scheduleHabitReminder: async (habitId: string, title: string, hour: number, minute: number) => {
-    // 1. Очистка старых триггеров (инкапсулируем логику отмены)
     await NotificationService.cancelHabitReminder(habitId);
 
-    // 2. Проверка разрешений
     if (!(await NotificationService._checkAndroidAlarmPermission())) return;
 
-    // 3. Расчет времени через утилиту
     const triggerDate = getNextTriggerDate(hour, minute);
 
     const trigger: TimestampTrigger = {
@@ -82,7 +75,6 @@ export const NotificationService = {
   },
 
   cancelHabitReminder: async (habitId: string) => {
-    // Объединяем в Promise.all для параллельного выполнения
     await Promise.all([
       notifee.cancelNotification(habitId),
       notifee.cancelTriggerNotification(habitId)

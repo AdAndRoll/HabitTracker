@@ -7,6 +7,5 @@ export type RootStackParamList = {
   HabitDetails: { habitId: string };
 };
 
-// Бонус: создаем хелперы для пропсов экранов (очень удобно в будущем)
 export type RootStackScreenProps<T extends keyof RootStackParamList> = 
   NativeStackScreenProps<RootStackParamList, T>;

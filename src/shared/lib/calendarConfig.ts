@@ -8,7 +8,7 @@ import {
 
 export const initCalendarLocale = () => {
   LocaleConfig.locales['ru'] = {
-    monthNames: [...MONTHS], // Копируем массив для безопасности
+    monthNames: [...MONTHS],
     monthNamesShort: [...MONTHS_SHORT],
     dayNames: [...DAYS_OF_WEEK_FULL],
     dayNamesShort: [...DAYS_OF_WEEK],

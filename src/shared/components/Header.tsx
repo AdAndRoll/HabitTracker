@@ -6,7 +6,7 @@ import { DAYS_OF_WEEK, MONTHS } from '../constants';
 import { getLocalDateString } from '../utils/localDate';
 
 interface Props {
-  selectedDate: string; // Формат "2026-03-31"
+  selectedDate: string;
   onDateChange: (date: string) => void;
 }
 
@@ -56,7 +56,7 @@ export const Header = ({ selectedDate, onDateChange }: Props) => {
               onPress={() => onDateChange(dateStr)}
               style={[
                 styles.dateCard,
-                { backgroundColor: dark ? colors.border : colors.background }, // В темной теме карточки чуть светлее фона
+                { backgroundColor: dark ? colors.border : colors.background },
                 isSelected && { backgroundColor: colors.primary }
               ]}
             >

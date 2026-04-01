@@ -23,11 +23,9 @@ export const StatsService = {
     yesterdayDate.setDate(yesterdayDate.getDate() - 1);
     const yesterday = getLocalDateString(yesterdayDate);
 
-    // Если привычка не отмечена ни сегодня, ни вчера — серия прервана
     if (!datesSet.has(today) && !datesSet.has(yesterday)) return 0;
 
     let streak = 0;
-    // Начинаем отсчет с актуальной даты (сегодня, если есть, иначе вчера)
     const checkDate = datesSet.has(today) ? new Date() : yesterdayDate;
 
     while (datesSet.has(getLocalDateString(checkDate))) {

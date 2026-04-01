@@ -4,20 +4,17 @@ import { useNavigation, useTheme } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Header, HabitCard, FloatingButton, FilterTabs } from '../../../shared/components';
-// Импортируем только константы и типы, цвета берем из хука
 import { spacing, type AppTheme } from '../../../shared/theme';
 import { RootStackParamList } from '../../../navigation/types';
 
-// Hooks
 import { useHabits } from '../hooks/useHabits';
 import { useHabitActions } from '../hooks/useHabitActions';
 
-// Services
 import { NotificationService } from '../services/NotificationService';
 
 export const MainScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { colors } = useTheme() as AppTheme; // Подключаем динамические цвета
+  const { colors } = useTheme() as AppTheme;
   
   const { 
     habits, 
