@@ -5,20 +5,20 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-// Импорты из твоего проекта
-import { useHabitStore } from '../../../store/useHabitStore'; // Проверь путь к стору
 import { theme, spacing, borderRadius } from '../../../shared/theme';
 import { EMOJIS, COLORS } from '../../../shared/constants';
 import { RootStackScreenProps } from '../../../navigation/types';
+import { useHabitActions } from '../hooks/useHabitActions';
 
 export const EditHabitScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<RootStackScreenProps<'EditHabit'>['route']>();
   const { habitId } = route.params;
 
-  const { habits, updateHabit } = useHabitStore();
+  // Используем наш единый хук для действий с привычками
+  const { habits, editExistingHabit } = useHabitActions();
   
-  // Ищем привычку в сторе
+  // Ищем данные привычки для инициализации формы
   const habit = habits.find(h => h.id === habitId);
 
   // Состояния формы
@@ -27,6 +27,7 @@ export const EditHabitScreen = () => {
   const [selectedEmoji, setSelectedEmoji] = useState(habit?.emoji || EMOJIS[0]);
   const [selectedColor, setSelectedColor] = useState(habit?.color || COLORS[0]);
 
+  // Если привычка не найдена (например, была удалена), закрываем экран
   useEffect(() => {
     if (!habit) {
       Alert.alert('Ошибка', 'Привычка не найдена');
@@ -38,25 +39,23 @@ export const EditHabitScreen = () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return;
 
-    // Проверка на дубликаты (кроме текущей привычки)
-    const isDuplicate = habits.some(
-      (h) => h.title.toLowerCase() === trimmedTitle.toLowerCase() && h.id !== habitId
-    );
-
-    if (isDuplicate) {
-      Alert.alert('Упс!', 'Привычка с таким названием уже существует.');
-      return;
+    try {
+      // Вся логика валидации дубликатов и обновления теперь внутри хука
+      editExistingHabit(habitId, {
+        title: trimmedTitle,
+        description: description,
+        emoji: selectedEmoji,
+        color: selectedColor,
+      });
+      navigation.goBack();
+    } catch (error: any) {
+      if (error.message === 'DUPLICATE_TITLE') {
+        Alert.alert('Упс!', 'Привычка с таким названием уже существует.');
+      } else {
+        Alert.alert('Ошибка', 'Не удалось сохранить изменения.');
+        console.error('EditHabit error:', error);
+      }
     }
-
-    // Вызываем обновление через Partial-объект
-    updateHabit(habitId, {
-      title: trimmedTitle,
-      description: description.trim(),
-      emoji: selectedEmoji,
-      color: selectedColor,
-    });
-
-    navigation.goBack();
   };
 
   return (
@@ -73,7 +72,7 @@ export const EditHabitScreen = () => {
           
           <View style={styles.header}>
             <Text style={styles.title}>Редактирование</Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
               <Text style={styles.closeBtn}>Отмена</Text>
             </TouchableOpacity>
           </View>
@@ -108,6 +107,7 @@ export const EditHabitScreen = () => {
             numberOfLines={3}
             placeholder="Необязательно"
             placeholderTextColor={theme.colors.textSecondary}
+            textAlignVertical="top"
           />
 
           <Text style={styles.label}>ИКОНКА</Text>
@@ -142,7 +142,10 @@ export const EditHabitScreen = () => {
           </View>
 
           <TouchableOpacity 
-            style={[styles.saveBtn, !title.trim() && styles.saveBtnDisabled]} 
+            style={[
+              styles.saveBtn, 
+              !title.trim() && styles.saveBtnDisabled
+            ]} 
             onPress={handleSave}
             disabled={!title.trim()}
           >
@@ -156,32 +159,17 @@ export const EditHabitScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: theme.colors.background 
-  },
-  flex: { 
-    flex: 1 
-  },
-  content: { 
-    padding: spacing.xl 
-  },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  flex: { flex: 1 },
+  content: { padding: spacing.xl },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
     marginBottom: spacing.xl 
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: '800', 
-    color: theme.colors.text 
-  },
-  closeBtn: { 
-    color: theme.colors.primary, 
-    fontWeight: '600',
-    fontSize: 16
-  },
+  title: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
+  closeBtn: { color: theme.colors.primary, fontWeight: '600', fontSize: 16 },
   preview: { 
     height: 80, 
     borderRadius: borderRadius.lg, 
@@ -190,17 +178,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
     marginBottom: spacing.xl, 
-    flexDirection: 'row' 
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md
   },
-  previewEmoji: { 
-    fontSize: 32, 
-    marginRight: spacing.md 
-  },
-  previewText: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: theme.colors.text 
-  },
+  previewEmoji: { fontSize: 32, marginRight: spacing.md },
+  previewText: { fontSize: 18, fontWeight: '700', color: theme.colors.text, flexShrink: 1 },
   label: { 
     fontSize: 12, 
     fontWeight: '800', 
@@ -218,13 +200,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     borderColor: theme.colors.border 
   },
-  textArea: { 
-    height: 80, 
-    textAlignVertical: 'top' 
-  },
-  row: { 
-    marginBottom: spacing.xl 
-  },
+  textArea: { height: 80, textAlignVertical: 'top' },
+  row: { marginBottom: spacing.xl },
   emojiBtn: { 
     width: 50, 
     height: 50, 
@@ -240,14 +217,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary, 
     backgroundColor: `${theme.colors.primary}10` 
   },
-  emojiText: { 
-    fontSize: 24 
-  },
-  colorGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    marginBottom: spacing.xl 
-  },
+  emojiText: { fontSize: 24 },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.xl },
   colorCircle: { 
     width: 44, 
     height: 44, 
@@ -257,21 +228,21 @@ const styles = StyleSheet.create({
   },
   selectedColor: { 
     borderWidth: 3, 
-    borderColor: theme.colors.text 
+    borderColor: theme.colors.text,
+    transform: [{ scale: 1.1 }]
   },
   saveBtn: { 
     backgroundColor: theme.colors.primary, 
     padding: spacing.lg, 
     borderRadius: borderRadius.lg, 
     alignItems: 'center',
-    marginTop: spacing.md
+    marginTop: spacing.md,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4
   },
-  saveBtnDisabled: { 
-    backgroundColor: theme.colors.border 
-  },
-  saveBtnText: { 
-    color: '#ffffff', 
-    fontSize: 18, 
-    fontWeight: '700' 
-  }
+  saveBtnDisabled: { backgroundColor: theme.colors.border, elevation: 0 },
+  saveBtnText: { color: '#ffffff', fontSize: 18, fontWeight: '700' }
 });

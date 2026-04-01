@@ -12,53 +12,48 @@ import {
   Alert 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useHabitStore } from '../../../store';
+
 import { theme, spacing, borderRadius } from '../../../shared/theme';
 import { EMOJIS, COLORS } from '../../../shared/constants';
+import { useHabitActions } from '../hooks/useHabitActions';
 
 export const AddHabitScreen = () => {
   const navigation = useNavigation();
-  
-  const { addHabit, habits } = useHabitStore();
+  const { createNewHabit } = useHabitActions();
 
+  // Состояние формы остается локальным
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState(''); // Новое состояние
+  const [description, setDescription] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   
   const trimmedTitle = title.trim();
 
+  /**
+   * Обработка сохранения через Action-хук
+   */
   const handleSave = () => {
-    // 1. Валидация на пустоту
-    if (trimmedTitle.length === 0) {
-      return;
-    }
+    if (trimmedTitle.length === 0) return;
 
-    // 2. Проверка на дубликаты (Case-insensitive)
-    const isDuplicate = habits.some(
-      (habit) => habit.title.toLowerCase() === trimmedTitle.toLowerCase()
-    );
-
-    if (isDuplicate) {
-      Alert.alert(
-        'Упс!',
-        'Привычка с таким названием уже существует. Придумайте что-нибудь новенькое.',
-        [{ text: 'Окей' }]
-      );
-      return;
-    }
-
-    // 3. Обработка сохранения
     try {
-      // Теперь передаем и описание (оно может быть пустым)
-      addHabit(trimmedTitle, selectedEmoji, selectedColor, description.trim());
+      // Делегируем логику сохранения и валидацию дубликатов хуку
+      createNewHabit(trimmedTitle, selectedEmoji, selectedColor, description);
       navigation.goBack(); 
-    } catch (error) {
-      Alert.alert(
-        'Ошибка сохранения', 
-        'Не удалось сохранить данные. Убедитесь, что на устройстве достаточно свободного места.'
-      );
-      console.error('Failed to add habit:', error);
+    } catch (error: any) {
+      // Обрабатываем специфичную ошибку дубликата
+      if (error.message === 'DUPLICATE_TITLE') {
+        Alert.alert(
+          'Упс!',
+          'Привычка с таким названием уже существует. Придумайте что-нибудь новенькое.',
+          [{ text: 'Окей' }]
+        );
+      } else {
+        Alert.alert(
+          'Ошибка', 
+          'Не удалось сохранить привычку. Попробуйте еще раз.'
+        );
+        console.error('AddHabit error:', error);
+      }
     }
   };
 
@@ -81,7 +76,7 @@ export const AddHabitScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Preview Card */}
+          {/* Preview Card - Визуальное подтверждение выбора */}
           <View style={[
             styles.preview, 
             { backgroundColor: `${selectedColor}15`, borderColor: selectedColor }
@@ -102,7 +97,7 @@ export const AddHabitScreen = () => {
             onChangeText={setTitle}
             maxLength={25}
             autoFocus={true}
-            returnKeyType="next" // Меняем на "далее", так как есть следующее поле
+            returnKeyType="next"
           />
 
           {/* Description Input */}
@@ -156,10 +151,10 @@ export const AddHabitScreen = () => {
           <TouchableOpacity 
             style={[
               styles.saveBtn, 
-              !title.trim() && styles.saveBtnDisabled
+              !trimmedTitle && styles.saveBtnDisabled
             ]} 
             onPress={handleSave}
-            disabled={!title.trim()}
+            disabled={!trimmedTitle}
           >
             <Text style={styles.saveBtnText}>Создать привычку</Text>
           </TouchableOpacity>
@@ -215,7 +210,7 @@ const styles = StyleSheet.create({
   },
   textArea: {
     height: 100,
-    textAlignVertical: 'top', // Важно для Android, чтобы текст начинался сверху
+    textAlignVertical: 'top', 
     paddingTop: spacing.md
   },
   row: { marginBottom: spacing.xl },

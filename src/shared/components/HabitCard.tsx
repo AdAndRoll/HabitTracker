@@ -4,8 +4,6 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 
 import { Habit } from '../../core';
 import { theme, spacing, borderRadius } from '../theme';
-import { useHabitStore } from '../../store/useHabitStore';
-import { NotificationService } from '../../features/habits/services/NotificationService';
 
 interface Props {
   habit: Habit;
@@ -16,13 +14,22 @@ interface Props {
   onLongPress: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  // Новый колбэк для передачи выбранного времени родителю
+  onSetReminder: (hour: number, minute: number) => void;
 }
 
 export const HabitCard = ({ 
-  habit, isCompleted, isToday, isFuture, onToggle, onLongPress, onEdit, onDelete 
+  habit, 
+  isCompleted, 
+  isToday, 
+  isFuture, 
+  onToggle, 
+  onLongPress, 
+  onEdit, 
+  onDelete,
+  onSetReminder 
 }: Props) => {
   const [showPicker, setShowPicker] = useState(false);
-  const updateReminder = useHabitStore((state) => state.updateReminder);
 
   const handleToggle = () => {
     if (Platform.OS !== 'web') {
@@ -31,24 +38,15 @@ export const HabitCard = ({
     onToggle();
   };
 
-  const handleTimeChange = async (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowPicker(false);
     
     if (event.type === 'set' && selectedDate) {
       const hour = selectedDate.getHours();
       const minute = selectedDate.getMinutes();
-      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
       
-      // 1. Сохраняем в локальный стор
-      updateReminder(habit.id, timeString);
-      
-      // 2. Планируем уведомление в ОС
-      await NotificationService.scheduleHabitReminder(
-        habit.id,
-        habit.title,
-        hour,
-        minute
-      );
+      // Просто пробрасываем данные вверх, не заботясь о логике сохранения
+      onSetReminder(hour, minute);
     }
   };
 
@@ -91,7 +89,6 @@ export const HabitCard = ({
       </TouchableOpacity>
 
       <View style={styles.actions}>
-        {/* Колокольчик для уведомлений */}
         <TouchableOpacity 
           onPress={() => setShowPicker(true)} 
           style={styles.actionBtn}

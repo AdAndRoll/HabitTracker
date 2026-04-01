@@ -5,26 +5,34 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Header, HabitCard, FloatingButton, FilterTabs } from '../../../shared/components';
 import { theme, spacing } from '../../../shared/theme';
-import { useHabits } from '../hooks/useHabits';
 import { RootStackParamList } from '../../../navigation/types';
-import { NotificationService } from '../services/NotificationService'; // Импортируем наш сервис
+
+// Hooks
+import { useHabits } from '../hooks/useHabits';
+import { useHabitActions } from '../hooks/useHabitActions';
+
+// Services
+import { NotificationService } from '../services/NotificationService';
 
 export const MainScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
+  // Данные и состояние фильтрации
   const { 
     habits, 
     selectedDate, 
     setSelectedDate, 
     toggleHabit, 
-    removeHabit,
     isToday,
     isFuture,
     filter,
     setFilter 
   } = useHabits();
 
-  // Инициализация уведомлений при первом запуске экрана
+  // Бизнес-логика (действия)
+  const { setHabitReminder, deleteHabit } = useHabitActions();
+
+  // Инициализация сервисов при монтировании
   useEffect(() => {
     const initNotifications = async () => {
       try {
@@ -33,10 +41,23 @@ export const MainScreen = () => {
         console.error('Ошибка инициализации уведомлений:', error);
       }
     };
-
     initNotifications();
   }, []);
 
+  /**
+   * Обработка установки напоминания
+   */
+  const handleSetReminder = async (id: string, title: string, hour: number, minute: number) => {
+    try {
+      await setHabitReminder(id, title, hour, minute);
+    } catch (error) {
+      Alert.alert('Ошибка', 'Не удалось установить напоминание');
+    }
+  };
+
+  /**
+   * Подтверждение удаления
+   */
   const confirmDelete = (id: string, title: string) => {
     Alert.alert(
       'Удаление',
@@ -45,13 +66,16 @@ export const MainScreen = () => {
         { text: 'Отмена', style: 'cancel' },
         { 
           text: 'Удалить', 
-          onPress: () => removeHabit(id), 
+          onPress: () => deleteHabit(id), 
           style: 'destructive' 
         },
       ]
     );
   };
 
+  /**
+   * Переключение статуса привычки
+   */
   const handleToggle = (id: string) => {
     if (isFuture) {
       Alert.alert('Рановато!', 'Нельзя отмечать привычки на будущие даты ⏳');
@@ -108,6 +132,7 @@ export const MainScreen = () => {
               onLongPress={() => navigation.navigate('HabitDetails', { habitId: item.id })}
               onEdit={() => navigation.navigate('EditHabit', { habitId: item.id })}
               onDelete={() => confirmDelete(item.id, item.title)}
+              onSetReminder={(h, m) => handleSetReminder(item.id, item.title, h, m)}
             />
           );
         }}

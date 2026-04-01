@@ -6,13 +6,33 @@ import notifee, {
   AndroidNotificationSetting 
 } from '@notifee/react-native';
 import { Platform, Linking } from 'react-native';
+import { getNextTriggerDate } from '../../../shared/utils/localDate';
 
 export const HABIT_CHANNEL_ID = 'habit_reminders';
 
 export const NotificationService = {
   /**
-   * Начальная настройка: каналы и права
+   * Внутренний метод для проверки прав на алармы (Android)
    */
+  async _checkAndroidAlarmPermission(): Promise<boolean> {
+    if (Platform.OS !== 'android') return true;
+
+    const settings = await notifee.getNotificationSettings();
+    if (settings.android.alarm !== AndroidNotificationSetting.ENABLED) {
+      console.warn('[NotificationService] No Exact Alarm permission');
+      try {
+        // Оставляем твой хардкод, раз пакет менять не хотим
+        await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM', [
+          { key: 'package', value: 'com.habittracker' } 
+        ]);
+      } catch (e) {
+        await Linking.openSettings();
+      }
+      return false;
+    }
+    return true;
+  },
+
   initialize: async () => {
     await notifee.createChannel({
       id: HABIT_CHANNEL_ID,
@@ -25,38 +45,15 @@ export const NotificationService = {
     return settings.authorizationStatus >= 1;
   },
 
-  /**
-   * Планирование ежедневного уведомления для привычки
-   */
   scheduleHabitReminder: async (habitId: string, title: string, hour: number, minute: number) => {
+    // 1. Очистка старых триггеров (инкапсулируем логику отмены)
     await NotificationService.cancelHabitReminder(habitId);
 
-    // --- ПРОВЕРКА ПРАВ ЧЕРЕЗ LINKING ---
-    if (Platform.OS === 'android') {
-      const settings = await notifee.getNotificationSettings();
-      if (settings.android.alarm !== AndroidNotificationSetting.ENABLED) {
-        console.warn('[NotificationService] No Exact Alarm permission. Launching Intent...');
-        
-        try {
-          // Прямой переход в настройки "Будильники и напоминания" для этого приложения
-          await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM', [
-            { key: 'package', value: 'com.habittracker' } // замени на свой package name, если он другой
-          ]);
-        } catch (e) {
-          // Если специфичный Intent не сработал, открываем общие настройки приложения
-          await Linking.openSettings();
-        }
-        return; 
-      }
-    }
+    // 2. Проверка разрешений
+    if (!(await NotificationService._checkAndroidAlarmPermission())) return;
 
-    const now = new Date();
-    const triggerDate = new Date();
-    triggerDate.setHours(hour, minute, 0, 0);
-
-    if (triggerDate <= now) {
-      triggerDate.setDate(triggerDate.getDate() + 1);
-    }
+    // 3. Расчет времени через утилиту
+    const triggerDate = getNextTriggerDate(hour, minute);
 
     const trigger: TimestampTrigger = {
       type: TriggerType.TIMESTAMP,
@@ -79,17 +76,16 @@ export const NotificationService = {
         },
         trigger
       );
-      console.log(`[NotificationService] Scheduled "${title}" at ${hour}:${minute}`);
     } catch (error) {
-      console.error('[NotificationService] Error scheduling notification:', error);
+      console.error('[NotificationService] Error:', error);
     }
   },
 
-  /**
-   * Отмена уведомления и ТРИГГЕРА
-   */
   cancelHabitReminder: async (habitId: string) => {
-    await notifee.cancelNotification(habitId);
-    await notifee.cancelTriggerNotification(habitId);
+    // Объединяем в Promise.all для параллельного выполнения
+    await Promise.all([
+      notifee.cancelNotification(habitId),
+      notifee.cancelTriggerNotification(habitId)
+    ]);
   }
 };

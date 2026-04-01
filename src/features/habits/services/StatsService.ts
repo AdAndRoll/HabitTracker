@@ -1,4 +1,5 @@
 import { Habit } from '../../../core/types';
+import { getLocalDateString } from '../../../shared/utils/localDate';
 
 export interface HabitStats {
   total: number;
@@ -8,43 +9,52 @@ export interface HabitStats {
 }
 
 export const StatsService = {
-  // Расчет текущего стрика (непрерывной серии)
+  
+  /**
+   * Расчет текущего стрика
+   */
   calculateCurrentStreak: (completedDays: string[]): number => {
-    if (!completedDays.length) return 0;
-    const sorted = [...completedDays].sort((a, b) => b.localeCompare(a));
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    if (!completedDays || completedDays.length === 0) return 0;
 
-    if (!sorted.includes(today) && !sorted.includes(yesterday)) return 0;
+    const datesSet = new Set(completedDays);
+    const today = getLocalDateString(new Date());
+    
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = getLocalDateString(yesterdayDate);
+
+    // Если привычка не отмечена ни сегодня, ни вчера — серия прервана
+    if (!datesSet.has(today) && !datesSet.has(yesterday)) return 0;
 
     let streak = 0;
-    let checkDate = sorted.includes(today) ? new Date() : new Date(Date.now() - 86400000);
+    // Начинаем отсчет с актуальной даты (сегодня, если есть, иначе вчера)
+    const checkDate = datesSet.has(today) ? new Date() : yesterdayDate;
 
-    while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0];
-      if (sorted.includes(dateStr)) {
-        streak++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else {
-        break;
-      }
+    while (datesSet.has(getLocalDateString(checkDate))) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
     }
+    
     return streak;
   },
 
-  // Глубокая статистика для детального экрана
+  /**
+   * Глубокая статистика для конкретной привычки
+   */
   getDetailedStats: (habit: Habit): HabitStats => {
-    const completedDays = [...(habit.completedDays || [])].sort();
-    const total = completedDays.length;
+    const days = habit.completedDays || [];
+    const total = days.length;
     
-    // Твоя логика: ищем самую раннюю дату (создание или первая отметка)
     const creationDate = new Date(habit.createdAt);
     creationDate.setHours(0, 0, 0, 0);
+
     let anchorDate = creationDate;
 
-    if (completedDays.length > 0) {
-      const firstCompletedDate = new Date(completedDays[0]);
+    if (total > 0) {
+      const sortedDays = [...days].sort();
+      const firstCompletedDate = new Date(sortedDays[0]);
       firstCompletedDate.setHours(0, 0, 0, 0);
+      
       if (firstCompletedDate < creationDate) {
         anchorDate = firstCompletedDate;
       }
@@ -54,15 +64,20 @@ export const StatsService = {
       day: '2-digit', month: '2-digit', year: 'numeric'
     });
 
-    const streak = StatsService.calculateCurrentStreak(habit.completedDays);
+    const streak = StatsService.calculateCurrentStreak(days);
     
-    // Процент от anchorDate до сегодня
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
     const diffTime = today.getTime() - anchorDate.getTime();
     const daysInPeriod = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1);
     const percentage = Math.round((total / daysInPeriod) * 100);
 
-    return { total, streak, percentage, startDateStr };
+    return { 
+      total, 
+      streak, 
+      percentage: Math.min(100, percentage), 
+      startDateStr 
+    };
   }
 };

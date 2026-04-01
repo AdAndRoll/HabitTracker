@@ -1,26 +1,30 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, SafeAreaView, TouchableOpacity, Alert, Platform, Vibration } from 'react-native';
+import { 
+  StyleSheet, View, Text, ScrollView, SafeAreaView, 
+  TouchableOpacity, Alert, Platform, Vibration 
+} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Calendar } from 'react-native-calendars';
+// Добавляем импорт типа для навигации
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { useHabitStore } from '../../../store/useHabitStore';
-import { useHabitStats } from '../hooks/useHabitStats'; // Импортируем наш новый хук
-import { HabitStats } from '../services/StatsService'; // И интерфейс для типизации
+import { useHabitActions } from '../hooks/useHabitActions';
+import { useHabitStats } from '../hooks/useHabitStats';
+import { HabitStats } from '../services/StatsService';
 import { theme, spacing, borderRadius } from '../../../shared/theme';
-import { RootStackScreenProps } from '../../../navigation/types';
+import { RootStackScreenProps, RootStackParamList } from '../../../navigation/types';
 
 export const HabitDetailsScreen = () => {
-  const navigation = useNavigation();
+  
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RootStackScreenProps<'HabitDetails'>['route']>();
   const { habitId } = route.params;
   
-  const { habits, toggleHabit } = useHabitStore();
+  const { habits, toggleHabit } = useHabitActions();
   const habit = habits.find((h) => h.id === habitId);
-
-  // Используем централизованную статистику
   const stats = useHabitStats(habitId) as HabitStats;
 
-  const handleDayPress = (day: any) => {
+  const handleDayPress = (day: { dateString: string }) => {
     const dateString = day.dateString;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -35,6 +39,7 @@ export const HabitDetailsScreen = () => {
     if (Platform.OS !== 'web') {
       try { Vibration.vibrate(10); } catch (e) {}
     }
+    
     toggleHabit(habitId, dateString);
   };
 
@@ -69,20 +74,26 @@ export const HabitDetailsScreen = () => {
     };
   }, [habit?.color]);
 
-  // Проверка на случай удаления привычки или отсутствия данных
   if (!habit || !stats) return null;
 
   const mainColor = habit.color;
-  const statBgColor = mainColor.indexOf('#') === 0 ? mainColor + '15' : 'rgba(0,0,0,0.05)';
+  const statBgColor = mainColor.startsWith('#') ? `${mainColor}15` : 'rgba(0,0,0,0.05)';
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.navBar}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
           <Text style={styles.backText}>← Назад</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('EditHabit', { habitId })}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Text style={styles.editBtn}>Изменить</Text>
         </TouchableOpacity>
       </View>
 
@@ -95,7 +106,6 @@ export const HabitDetailsScreen = () => {
           ) : null}
         </View>
 
-        {/* Обновленная строка статистики с тремя карточками */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: statBgColor }]}>
             <Text style={[styles.statValue, { color: mainColor }]}>{stats.total}</Text>
@@ -127,9 +137,11 @@ export const HabitDetailsScreen = () => {
             firstDay={1}
             enableSwipeMonths={true}
             renderArrow={(direction: string) => (
-              <Text style={{ fontSize: 20, color: mainColor, fontWeight: 'bold', padding: 5 }}>
-                {direction === 'left' ? '❮' : '❯'}
-              </Text>
+              <View style={styles.arrowContainer}>
+                <Text style={[styles.arrowText, { color: mainColor }]}>
+                  {direction === 'left' ? '❮' : '❯'}
+                </Text>
+              </View>
             )}
             showSixWeeks={true}
           />
@@ -142,8 +154,15 @@ export const HabitDetailsScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  navBar: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
+  navBar: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl, 
+    paddingVertical: spacing.md 
+  },
   backText: { color: theme.colors.primary, fontSize: 16, fontWeight: '600' },
+  editBtn: { color: theme.colors.textSecondary, fontSize: 16, fontWeight: '600' },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
   header: { alignItems: 'center', marginBottom: spacing.xl },
   emoji: { fontSize: 60, marginBottom: spacing.sm },
@@ -174,6 +193,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border
   },
   calendar: { borderRadius: borderRadius.lg },
+  arrowContainer: { padding: 5 },
+  arrowText: { fontSize: 20, fontWeight: 'bold' },
   hintText: {
     fontSize: 12,
     color: theme.colors.textSecondary,
