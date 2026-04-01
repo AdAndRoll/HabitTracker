@@ -1,28 +1,28 @@
 import { useMemo } from 'react';
-import { useHabitStore } from '../../../store';
-import { StatsService } from '../services/StatsService';
+import { useHabitStore } from '../../../store/useHabitStore';
+import { StatsService, HabitStats } from '../services/StatsService';
+
+interface GlobalStats {
+  totalCompletions: number;
+  activeHabits: number;
+  bestStreak: number;
+}
 
 export const useHabitStats = (habitId?: string) => {
   const habits = useHabitStore((state) => state.habits);
 
-  const stats = useMemo(() => {
+  return useMemo(() => {
     if (habitId) {
       const habit = habits.find(h => h.id === habitId);
       if (!habit) return null;
-      return {
-        streak: StatsService.calculateCurrentStreak(habit.completedDays),
-        rate: StatsService.calculateCompletionRate(habit),
-        total: habit.completedDays.length
-      };
+      return StatsService.getDetailedStats(habit) as HabitStats;
     }
 
-    // Общая статистика по всем привычкам
-    return {
-      totalCompletions: habits.reduce((acc, h) => acc + h.completedDays.length, 0),
+    const global: GlobalStats = {
+      totalCompletions: habits.reduce((acc, h) => acc + (h.completedDays?.length || 0), 0),
       activeHabits: habits.length,
-      bestStreak: Math.max(...habits.map(h => StatsService.calculateCurrentStreak(h.completedDays)), 0)
+      bestStreak: Math.max(...habits.map(h => StatsService.calculateCurrentStreak(h.completedDays || [])), 0)
     };
+    return global;
   }, [habits, habitId]);
-
-  return stats;
 };

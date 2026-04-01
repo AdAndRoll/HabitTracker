@@ -3,7 +3,8 @@ import { StyleSheet, FlatList, SafeAreaView, View, Text, Alert } from 'react-nat
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Header, HabitCard, FloatingButton } from '../../../shared/components';
+// 1. Добавляем FilterTabs в импорт
+import { Header, HabitCard, FloatingButton, FilterTabs } from '../../../shared/components';
 import { theme, spacing } from '../../../shared/theme';
 import { useHabits } from '../hooks/useHabits';
 import { RootStackParamList } from '../../../navigation/types';
@@ -18,12 +19,12 @@ export const MainScreen = () => {
     toggleHabit, 
     removeHabit,
     isToday,
-    isFuture
+    isFuture,
+    // 2. Извлекаем новые поля из хука
+    filter,
+    setFilter 
   } = useHabits();
 
-  /**
-   * Подтверждение удаления
-   */
   const confirmDelete = (id: string, title: string) => {
     Alert.alert(
       'Удаление',
@@ -39,29 +40,32 @@ export const MainScreen = () => {
     );
   };
 
-  /**
-   * Обработка переключения привычки с проверкой на будущее
-   */
   const handleToggle = (id: string) => {
     if (isFuture) {
-      Alert.alert(
-        'Рановато!', 
-        'Нельзя отмечать привычки на будущие даты ⏳'
-      );
+      Alert.alert('Рановато!', 'Нельзя отмечать привычки на будущие даты ⏳');
       return;
     }
     toggleHabit(id);
   };
 
-  const ListEmptyComponent = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🌿</Text>
-      <Text style={styles.emptyTitle}>Список пуст</Text>
-      <Text style={styles.emptySubtitle}>
-        Самое время завести новую{"\n"}полезную привычку!
-      </Text>
-    </View>
-  );
+  // Улучшенный пустой список, который реагирует на выбранный фильтр
+  const ListEmptyComponent = () => {
+    const getMessage = () => {
+      switch (filter) {
+        case 'completed': return 'Вы еще не выполнили ни одной привычки. Пора начинать! 💪';
+        case 'pending': return 'Все задачи выполнены! Вы молодец! 🎉';
+        default: return 'Самое время завести новую\nполезную привычку!';
+      }
+    };
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>{filter === 'completed' ? '⏳' : '🌿'}</Text>
+        <Text style={styles.emptyTitle}>Список пуст</Text>
+        <Text style={styles.emptySubtitle}>{getMessage()}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,6 +73,11 @@ export const MainScreen = () => {
         selectedDate={selectedDate} 
         onDateChange={setSelectedDate} 
       />
+
+      {/* 3. Добавляем переключатель фильтров */}
+      <View style={styles.filterWrapper}>
+        <FilterTabs activeFilter={filter} onChange={setFilter} />
+      </View>
 
       <FlatList
         data={habits}
@@ -85,7 +94,6 @@ export const MainScreen = () => {
               isCompleted={isCompleted}
               isToday={isToday}
               isFuture={isFuture}
-              // Используем новую функцию-обертку вместо прямого toggleHabit
               onToggle={() => handleToggle(item.id)}
               onLongPress={() => navigation.navigate('HabitDetails', { habitId: item.id })}
               onEdit={() => navigation.navigate('EditHabit', { habitId: item.id })}
@@ -107,6 +115,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  // Добавляем отступ для обертки фильтров
+  filterWrapper: {
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+  },
   listContent: {
     padding: spacing.md,
     paddingBottom: 160, 
@@ -114,7 +127,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    paddingTop: 120,
+    paddingTop: 80, // Немного подняли, чтобы влезло с табами
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,

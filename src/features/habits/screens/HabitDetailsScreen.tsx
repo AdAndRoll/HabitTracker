@@ -4,6 +4,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { Calendar } from 'react-native-calendars';
 
 import { useHabitStore } from '../../../store/useHabitStore';
+import { useHabitStats } from '../hooks/useHabitStats'; // Импортируем наш новый хук
+import { HabitStats } from '../services/StatsService'; // И интерфейс для типизации
 import { theme, spacing, borderRadius } from '../../../shared/theme';
 import { RootStackScreenProps } from '../../../navigation/types';
 
@@ -11,33 +13,12 @@ export const HabitDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<RootStackScreenProps<'HabitDetails'>['route']>();
   const { habitId } = route.params;
+  
   const { habits, toggleHabit } = useHabitStore();
-
   const habit = habits.find((h) => h.id === habitId);
 
-  const stats = useMemo(() => {
-    if (!habit || !habit.completedDays || habit.completedDays.length === 0) {
-      return { total: 0, streak: 0 };
-    }
-    const completedSet = new Set(habit.completedDays);
-    const total = habit.completedDays.length;
-    let streak = 0;
-    const curr = new Date();
-    curr.setHours(0, 0, 0, 0);
-
-    let dateKey = curr.toISOString().split('T')[0];
-    if (!completedSet.has(dateKey)) {
-      curr.setDate(curr.getDate() - 1);
-      dateKey = curr.toISOString().split('T')[0];
-    }
-
-    while (completedSet.has(dateKey)) {
-      streak++;
-      curr.setDate(curr.getDate() - 1);
-      dateKey = curr.toISOString().split('T')[0];
-    }
-    return { total, streak }; 
-  }, [habit]);
+  // Используем централизованную статистику
+  const stats = useHabitStats(habitId) as HabitStats;
 
   const handleDayPress = (day: any) => {
     const dateString = day.dateString;
@@ -73,34 +54,23 @@ export const HabitDetailsScreen = () => {
 
   const calendarTheme = useMemo(() => {
     const color = habit ? habit.color : theme.colors.primary;
-    
     return {
       calendarBackground: theme.colors.surface,
       textSectionTitleColor: theme.colors.textSecondary,
-      
-      // Основной текст дней
       dayTextColor: theme.colors.text,
-      
-      // Сегодняшний день — делаем синим и жирным
-      todayTextColor: theme.colors.primary, // Твой indigo
+      todayTextColor: theme.colors.primary,
       textTodayFontWeight: '900' as const,
-      
-      // Текст выбранного дня
       selectedDayTextColor: '#ffffff',
-      
-      // Дни других месяцев (делаем их ЧЕТКИМИ, не блеклыми)
-      textDisabledColor: theme.colors.textSecondary, // Используем slate500 вместо светлого slate100
-      
-      // Заголовок
+      textDisabledColor: theme.colors.textSecondary,
       monthTextColor: theme.colors.text,
       textMonthFontWeight: '800' as const, 
       textDayHeaderFontWeight: '600' as const,
-      
       arrowColor: color,
     };
   }, [habit?.color]);
 
-  if (!habit) return null;
+  // Проверка на случай удаления привычки или отсутствия данных
+  if (!habit || !stats) return null;
 
   const mainColor = habit.color;
   const statBgColor = mainColor.indexOf('#') === 0 ? mainColor + '15' : 'rgba(0,0,0,0.05)';
@@ -116,7 +86,7 @@ export const HabitDetailsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.emoji}>{habit.emoji}</Text>
           <Text style={styles.title}>{habit.title}</Text>
@@ -125,23 +95,31 @@ export const HabitDetailsScreen = () => {
           ) : null}
         </View>
 
+        {/* Обновленная строка статистики с тремя карточками */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: statBgColor }]}>
             <Text style={[styles.statValue, { color: mainColor }]}>{stats.total}</Text>
             <Text style={styles.statLabel}>Всего раз</Text>
           </View>
+          
           <View style={[styles.statCard, { backgroundColor: '#FF950015' }]}>
             <Text style={[styles.statValue, { color: '#FF9500' }]}>{stats.streak}</Text>
-            <Text style={stats.streak > 0 ? { color: '#FF9500', fontSize: 12, fontWeight: '600' } : styles.statLabel}>
-              Дней подряд
-            </Text>
+            <Text style={styles.statLabel}>Дней подряд</Text>
+          </View>
+
+          <View style={[styles.statCard, { backgroundColor: '#10B98115' }]}>
+            <Text style={[styles.statValue, { color: '#10B981' }]}>{stats.percentage}%</Text>
+            <Text style={styles.statLabel}>Успех</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>История выполнений</Text>
+        <Text style={styles.sectionTitle}>
+          История {stats.startDateStr ? `с ${stats.startDateStr}` : ''}
+        </Text>
+        
         <View style={styles.calendarWrapper}>
           <Calendar
-            key={theme.dark ? 'dark' : 'light'} // Форсируем перерисовку при смене темы, если нужно
+            key={theme.dark ? 'dark' : 'light'}
             markedDates={markedDates}
             onDayPress={handleDayPress}
             theme={calendarTheme}
@@ -153,7 +131,6 @@ export const HabitDetailsScreen = () => {
                 {direction === 'left' ? '❮' : '❯'}
               </Text>
             )}
-            // Эти параметры делают цифры вне текущего месяца более явными
             showSixWeeks={true}
           />
         </View>
@@ -172,18 +149,23 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 60, marginBottom: spacing.sm },
   title: { fontSize: 26, fontWeight: '800', color: theme.colors.text, textAlign: 'center' },
   description: { fontSize: 15, color: theme.colors.textSecondary, textAlign: 'center', marginTop: spacing.xs },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xl },
+  statsRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: spacing.xl,
+    gap: spacing.sm 
+  },
   statCard: { 
-    flex: 0.48, 
-    padding: spacing.md, 
+    flex: 1, 
+    paddingVertical: spacing.md, 
     borderRadius: borderRadius.lg, 
     alignItems: 'center',
-    height: 90,
+    height: 85,
     justifyContent: 'center'
   },
-  statValue: { fontSize: 22, fontWeight: '800' },
-  statLabel: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 2, fontWeight: '600' },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: spacing.md },
+  statValue: { fontSize: 20, fontWeight: '800' },
+  statLabel: { fontSize: 10, color: theme.colors.textSecondary, marginTop: 4, fontWeight: '600', textAlign: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: spacing.md },
   calendarWrapper: { 
     backgroundColor: theme.colors.surface, 
     borderRadius: borderRadius.lg,
