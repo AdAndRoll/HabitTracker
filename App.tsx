@@ -11,7 +11,6 @@ const App = () => {
   const activeTheme = isDarkMode ? darkTheme : lightTheme;
 
   useEffect(() => {
-    // Инициализация происходит строго после загрузки основного контекста React
     initCalendarLocale();
   }, []);
 
