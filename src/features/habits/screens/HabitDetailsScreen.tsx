@@ -3,20 +3,19 @@ import {
   StyleSheet, View, Text, ScrollView, SafeAreaView, 
   TouchableOpacity, Alert, Platform, Vibration 
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useTheme } from '@react-navigation/native';
 import { Calendar } from 'react-native-calendars';
-// Добавляем импорт типа для навигации
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useHabitActions } from '../hooks/useHabitActions';
 import { useHabitStats } from '../hooks/useHabitStats';
 import { HabitStats } from '../services/StatsService';
-import { theme, spacing, borderRadius } from '../../../shared/theme';
+import { spacing, borderRadius, type AppTheme } from '../../../shared/theme';
 import { RootStackScreenProps, RootStackParamList } from '../../../navigation/types';
 
 export const HabitDetailsScreen = () => {
-  
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { colors, dark } = useTheme() as AppTheme;
   const route = useRoute<RootStackScreenProps<'HabitDetails'>['route']>();
   const { habitId } = route.params;
   
@@ -51,85 +50,91 @@ export const HabitDetailsScreen = () => {
       marked[date] = {
         selected: true,
         selectedColor: habit.color,
-        textColor: '#ffffff',
+        textColor: colors.staticWhite,
       };
     });
     return marked;
-  }, [habit]);
+  }, [habit, colors.staticWhite]);
 
   const calendarTheme = useMemo(() => {
-    const color = habit ? habit.color : theme.colors.primary;
+    const mainColor = habit ? habit.color : colors.primary;
     return {
-      calendarBackground: theme.colors.surface,
-      textSectionTitleColor: theme.colors.textSecondary,
-      dayTextColor: theme.colors.text,
-      todayTextColor: theme.colors.primary,
+      calendarBackground: colors.surface,
+      textSectionTitleColor: colors.textSecondary,
+      dayTextColor: colors.text,
+      todayTextColor: colors.primary,
       textTodayFontWeight: '900' as const,
-      selectedDayTextColor: '#ffffff',
-      textDisabledColor: theme.colors.textSecondary,
-      monthTextColor: theme.colors.text,
+      selectedDayTextColor: colors.staticWhite,
+      textDisabledColor: dark ? '#444' : '#ccc', // Кастомный приглушенный цвет для дат вне месяца
+      monthTextColor: colors.text,
       textMonthFontWeight: '800' as const, 
       textDayHeaderFontWeight: '600' as const,
-      arrowColor: color,
+      arrowColor: mainColor,
+      // Стили для названий дней (Пн, Вт...)
+      textSectionTitleDisabledColor: colors.textMuted,
     };
-  }, [habit?.color]);
+  }, [habit?.color, colors, dark]);
 
   if (!habit || !stats) return null;
 
   const mainColor = habit.color;
-  const statBgColor = mainColor.startsWith('#') ? `${mainColor}15` : 'rgba(0,0,0,0.05)';
+  // В темной теме делаем подложку карточек чуть ярче (30 вместо 15), чтобы цвет читался
+  const opacity = dark ? '30' : '15';
+  const statBgColor = `${mainColor}${opacity}`;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.navBar}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Text style={styles.backText}>← Назад</Text>
+          <Text style={[styles.backText, { color: colors.primary }]}>← Назад</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           onPress={() => navigation.navigate('EditHabit', { habitId })}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Text style={styles.editBtn}>Изменить</Text>
+          <Text style={[styles.editBtn, { color: colors.textSecondary }]}>Изменить</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.emoji}>{habit.emoji}</Text>
-          <Text style={styles.title}>{habit.title}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{habit.title}</Text>
           {habit.description ? (
-            <Text style={styles.description}>{habit.description}</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              {habit.description}
+            </Text>
           ) : null}
         </View>
 
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: statBgColor }]}>
             <Text style={[styles.statValue, { color: mainColor }]}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Всего раз</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Всего раз</Text>
           </View>
           
-          <View style={[styles.statCard, { backgroundColor: '#FF950015' }]}>
+          <View style={[styles.statCard, { backgroundColor: dark ? '#FF950030' : '#FF950015' }]}>
             <Text style={[styles.statValue, { color: '#FF9500' }]}>{stats.streak}</Text>
-            <Text style={styles.statLabel}>Дней подряд</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Дней подряд</Text>
           </View>
 
-          <View style={[styles.statCard, { backgroundColor: '#10B98115' }]}>
+          <View style={[styles.statCard, { backgroundColor: dark ? '#10B98130' : '#10B98115' }]}>
             <Text style={[styles.statValue, { color: '#10B981' }]}>{stats.percentage}%</Text>
-            <Text style={styles.statLabel}>Успех</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Успех</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
           История {stats.startDateStr ? `с ${stats.startDateStr}` : ''}
         </Text>
         
-        <View style={styles.calendarWrapper}>
+        <View style={[styles.calendarWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Calendar
-            key={theme.dark ? 'dark' : 'light'}
+            key={dark ? 'dark' : 'light'} // CRITICAL: Перерисовывает календарь при смене темы
             markedDates={markedDates}
             onDayPress={handleDayPress}
             theme={calendarTheme}
@@ -146,14 +151,16 @@ export const HabitDetailsScreen = () => {
             showSixWeeks={true}
           />
         </View>
-        <Text style={styles.hintText}>* Нажми на день в календаре, чтобы изменить статус</Text>
+        <Text style={[styles.hintText, { color: colors.textMuted }]}>
+          * Нажми на день в календаре, чтобы изменить статус
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1 },
   navBar: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -161,13 +168,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, 
     paddingVertical: spacing.md 
   },
-  backText: { color: theme.colors.primary, fontSize: 16, fontWeight: '600' },
-  editBtn: { color: theme.colors.textSecondary, fontSize: 16, fontWeight: '600' },
+  backText: { fontSize: 16, fontWeight: '600' },
+  editBtn: { fontSize: 16, fontWeight: '600' },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
   header: { alignItems: 'center', marginBottom: spacing.xl },
   emoji: { fontSize: 60, marginBottom: spacing.sm },
-  title: { fontSize: 26, fontWeight: '800', color: theme.colors.text, textAlign: 'center' },
-  description: { fontSize: 15, color: theme.colors.textSecondary, textAlign: 'center', marginTop: spacing.xs },
+  title: { fontSize: 26, fontWeight: '800', textAlign: 'center' },
+  description: { fontSize: 15, textAlign: 'center', marginTop: spacing.xs },
   statsRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -183,21 +190,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   statValue: { fontSize: 20, fontWeight: '800' },
-  statLabel: { fontSize: 10, color: theme.colors.textSecondary, marginTop: 4, fontWeight: '600', textAlign: 'center' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: spacing.md },
+  statLabel: { fontSize: 10, marginTop: 4, fontWeight: '600', textAlign: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: spacing.md },
   calendarWrapper: { 
-    backgroundColor: theme.colors.surface, 
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: theme.colors.border
   },
   calendar: { borderRadius: borderRadius.lg },
   arrowContainer: { padding: 5 },
   arrowText: { fontSize: 20, fontWeight: 'bold' },
   hintText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
     marginTop: spacing.sm,
     textAlign: 'center',
     fontStyle: 'italic'

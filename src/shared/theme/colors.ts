@@ -1,28 +1,37 @@
-import { DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { DefaultTheme, DarkTheme, Theme } from '@react-navigation/native';
 
 const palette = {
   white: '#ffffff',
   black: '#000000',
   indigo: '#6366f1',
   
-  // Светлые оттенки (Slate/Gray)
-  slate50: '#f8fafc',   // Фон светлой темы
-  slate100: '#f1f5f9',  // Бордеры светлой темы
-  slate500: '#64748b',  // Вторичный текст
-  slate800: '#1e293b',  // Основной текст
+  slate50: '#f8fafc',
+  slate100: '#f1f5f9',
+  slate400: '#94a3b8',  // Добавили: более светлый серый для темной темы
+  slate500: '#64748b',
+  slate800: '#1e293b',
   
-  // Темные оттенки
-  slate900: '#0f172a',  // Фон темной темы
-  slate850: '#1e293b',  // Поверхности в темной теме
-  slate700: '#334155',  // Бордеры в темной теме
+  slate900: '#0f172a',
+  slate850: '#1e293b',
+  slate700: '#334155',
   
   red: '#ef4444',
 };
 
-// 2. Светлая тема
-export const lightTheme = {
+export interface AppTheme extends Theme {
+  colors: Theme['colors'] & {
+    surface: string;
+    textSecondary: string;
+    textMuted: string;      // Для подсказок типа "нажми чтобы..."
+    error: string;
+    staticWhite: string;
+    completedOpacity: number; // Семантический токен для выполненных задач
+  };
+}
+
+export const lightTheme: AppTheme = {
+  ...DefaultTheme,
   dark: false,
-  fonts: DefaultTheme.fonts,
   colors: {
     ...DefaultTheme.colors,
     primary: palette.indigo,
@@ -30,25 +39,33 @@ export const lightTheme = {
     surface: palette.white,
     text: palette.slate800,
     textSecondary: palette.slate500,
+    textMuted: palette.slate500,
     border: palette.slate100,
     error: palette.red,
     staticWhite: palette.white, 
+    notification: palette.red,
+    completedOpacity: 0.6, // В светлой теме можно сильнее приглушать
   },
 };
 
-// 3. Темная тема
-export const darkTheme = {
+export const darkTheme: AppTheme = {
+  ...DarkTheme,
   dark: true,
-  fonts: DarkTheme.fonts,
   colors: {
     ...DarkTheme.colors,
     primary: palette.indigo,
-    background: palette.black,      // Или palette.slate900
-    surface: palette.slate850,      // Вот наш "чистый" цвет без хардкода
-    border: palette.slate700,       // И здесь тоже
+    background: palette.black, 
+    surface: palette.slate850, 
     text: palette.slate50,
-    textSecondary: palette.slate500,
+    // Используем slate400, чтобы вторичный текст был читаемым
+    textSecondary: palette.slate400, 
+    // Текст подсказок в темноте должен быть еще светлее для контраста
+    textMuted: palette.slate50, 
+    border: palette.slate700,
     error: palette.red,
     staticWhite: palette.white, 
+    notification: palette.red,
+    completedOpacity: 0.85, // В темной теме оставляем высокую непрозрачность
   },
 };
+

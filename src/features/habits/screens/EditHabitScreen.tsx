@@ -3,31 +3,27 @@ import {
   StyleSheet, View, Text, TextInput, TouchableOpacity, 
   ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Alert 
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useTheme } from '@react-navigation/native';
 
-import { theme, spacing, borderRadius } from '../../../shared/theme';
+import { spacing, borderRadius, type AppTheme } from '../../../shared/theme';
 import { EMOJIS, COLORS } from '../../../shared/constants';
 import { RootStackScreenProps } from '../../../navigation/types';
 import { useHabitActions } from '../hooks/useHabitActions';
 
 export const EditHabitScreen = () => {
   const navigation = useNavigation();
+  const { colors, dark } = useTheme() as AppTheme;
   const route = useRoute<RootStackScreenProps<'EditHabit'>['route']>();
   const { habitId } = route.params;
 
-  // Используем наш единый хук для действий с привычками
   const { habits, editExistingHabit } = useHabitActions();
-  
-  // Ищем данные привычки для инициализации формы
   const habit = habits.find(h => h.id === habitId);
 
-  // Состояния формы
   const [title, setTitle] = useState(habit?.title || '');
   const [description, setDescription] = useState(habit?.description || '');
   const [selectedEmoji, setSelectedEmoji] = useState(habit?.emoji || EMOJIS[0]);
   const [selectedColor, setSelectedColor] = useState(habit?.color || COLORS[0]);
 
-  // Если привычка не найдена (например, была удалена), закрываем экран
   useEffect(() => {
     if (!habit) {
       Alert.alert('Ошибка', 'Привычка не найдена');
@@ -40,7 +36,6 @@ export const EditHabitScreen = () => {
     if (!trimmedTitle) return;
 
     try {
-      // Вся логика валидации дубликатов и обновления теперь внутри хука
       editExistingHabit(habitId, {
         title: trimmedTitle,
         description: description,
@@ -53,13 +48,12 @@ export const EditHabitScreen = () => {
         Alert.alert('Упс!', 'Привычка с таким названием уже существует.');
       } else {
         Alert.alert('Ошибка', 'Не удалось сохранить изменения.');
-        console.error('EditHabit error:', error);
       }
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={styles.flex}
@@ -71,53 +65,63 @@ export const EditHabitScreen = () => {
         >
           
           <View style={styles.header}>
-            <Text style={styles.title}>Редактирование</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Редактирование</Text>
             <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
-              <Text style={styles.closeBtn}>Отмена</Text>
+              <Text style={[styles.closeBtn, { color: colors.primary }]}>Отмена</Text>
             </TouchableOpacity>
           </View>
 
           {/* Preview карточки */}
           <View style={[
             styles.preview, 
-            { backgroundColor: `${selectedColor}15`, borderColor: selectedColor }
+            { 
+              backgroundColor: dark ? `${selectedColor}30` : `${selectedColor}15`, 
+              borderColor: selectedColor 
+            }
           ]}>
             <Text style={styles.previewEmoji}>{selectedEmoji}</Text>
-            <Text style={styles.previewText} numberOfLines={1}>
+            <Text style={[styles.previewText, { color: colors.text }]} numberOfLines={1}>
               {title || 'Название'}
             </Text>
           </View>
 
-          <Text style={styles.label}>НАЗВАНИЕ</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>НАЗВАНИЕ</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
             value={title}
             onChangeText={setTitle}
             maxLength={25}
             placeholder="Напр: Зарядка"
-            placeholderTextColor={theme.colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
+            keyboardAppearance={dark ? 'dark' : 'light'}
           />
 
-          <Text style={styles.label}>ОПИСАНИЕ</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>ОПИСАНИЕ</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[
+              styles.input, 
+              styles.textArea, 
+              { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }
+            ]}
             value={description}
             onChangeText={setDescription}
             multiline
             numberOfLines={3}
             placeholder="Необязательно"
-            placeholderTextColor={theme.colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             textAlignVertical="top"
+            keyboardAppearance={dark ? 'dark' : 'light'}
           />
 
-          <Text style={styles.label}>ИКОНКА</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>ИКОНКА</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.row}>
             {EMOJIS.map((emoji) => (
               <TouchableOpacity 
                 key={emoji} 
                 style={[
                   styles.emojiBtn, 
-                  selectedEmoji === emoji && styles.selectedEmoji
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  selectedEmoji === emoji && { borderColor: colors.primary, backgroundColor: `${colors.primary}20` }
                 ]}
                 onPress={() => setSelectedEmoji(emoji)}
               >
@@ -126,7 +130,7 @@ export const EditHabitScreen = () => {
             ))}
           </ScrollView>
 
-          <Text style={styles.label}>ЦВЕТ</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>ЦВЕТ</Text>
           <View style={styles.colorGrid}>
             {COLORS.map((color) => (
               <TouchableOpacity 
@@ -134,7 +138,7 @@ export const EditHabitScreen = () => {
                 style={[
                   styles.colorCircle, 
                   { backgroundColor: color }, 
-                  selectedColor === color && styles.selectedColor
+                  selectedColor === color && [styles.selectedColor, { borderColor: colors.text }]
                 ]}
                 onPress={() => setSelectedColor(color)}
               />
@@ -144,12 +148,13 @@ export const EditHabitScreen = () => {
           <TouchableOpacity 
             style={[
               styles.saveBtn, 
-              !title.trim() && styles.saveBtnDisabled
+              { backgroundColor: colors.primary, shadowColor: colors.primary },
+              !title.trim() && { backgroundColor: colors.border, shadowOpacity: 0, elevation: 0 }
             ]} 
             onPress={handleSave}
             disabled={!title.trim()}
           >
-            <Text style={styles.saveBtnText}>Сохранить изменения</Text>
+            <Text style={[styles.saveBtnText, { color: colors.staticWhite }]}>Сохранить изменения</Text>
           </TouchableOpacity>
           
         </ScrollView>
@@ -159,7 +164,7 @@ export const EditHabitScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1 },
   flex: { flex: 1 },
   content: { padding: spacing.xl },
   header: { 
@@ -168,8 +173,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     marginBottom: spacing.xl 
   },
-  title: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
-  closeBtn: { color: theme.colors.primary, fontWeight: '600', fontSize: 16 },
+  title: { fontSize: 24, fontWeight: '800' },
+  closeBtn: { fontWeight: '600', fontSize: 16 },
   preview: { 
     height: 80, 
     borderRadius: borderRadius.lg, 
@@ -182,23 +187,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md
   },
   previewEmoji: { fontSize: 32, marginRight: spacing.md },
-  previewText: { fontSize: 18, fontWeight: '700', color: theme.colors.text, flexShrink: 1 },
+  previewText: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
   label: { 
     fontSize: 12, 
     fontWeight: '800', 
-    color: theme.colors.textSecondary, 
     marginBottom: spacing.sm, 
     letterSpacing: 1 
   },
   input: { 
-    backgroundColor: theme.colors.surface, 
     padding: spacing.md, 
     borderRadius: borderRadius.md, 
     fontSize: 16, 
-    color: theme.colors.text, 
     marginBottom: spacing.xl, 
     borderWidth: 1, 
-    borderColor: theme.colors.border 
   },
   textArea: { height: 80, textAlignVertical: 'top' },
   row: { marginBottom: spacing.xl },
@@ -209,13 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     marginRight: spacing.sm, 
     borderRadius: borderRadius.sm, 
-    backgroundColor: theme.colors.surface, 
     borderWidth: 1, 
-    borderColor: 'transparent' 
-  },
-  selectedEmoji: { 
-    borderColor: theme.colors.primary, 
-    backgroundColor: `${theme.colors.primary}10` 
   },
   emojiText: { fontSize: 24 },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.xl },
@@ -228,21 +223,17 @@ const styles = StyleSheet.create({
   },
   selectedColor: { 
     borderWidth: 3, 
-    borderColor: theme.colors.text,
     transform: [{ scale: 1.1 }]
   },
   saveBtn: { 
-    backgroundColor: theme.colors.primary, 
     padding: spacing.lg, 
     borderRadius: borderRadius.lg, 
     alignItems: 'center',
     marginTop: spacing.md,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5
   },
-  saveBtnDisabled: { backgroundColor: theme.colors.border, elevation: 0 },
-  saveBtnText: { color: '#ffffff', fontSize: 18, fontWeight: '700' }
+  saveBtnText: { fontSize: 18, fontWeight: '700' }
 });

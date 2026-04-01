@@ -1,19 +1,32 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
-import { theme, spacing, borderRadius } from '../theme';
+import { useTheme } from '@react-navigation/native';
+// Импортируем всё из единого входа shared/theme
+import { spacing, borderRadius, type AppTheme } from '../theme';
 
 interface Props {
   onPress: () => void;
 }
 
 export const FloatingButton = ({ onPress }: Props) => {
+  // Благодаря расширенному AppTheme, TS видит colors.staticWhite и colors.primary
+  const { colors, dark } = useTheme() as AppTheme;
+
   return (
     <TouchableOpacity 
-      style={styles.button} 
+      style={[
+        styles.button, 
+        { 
+          backgroundColor: colors.primary,
+          // В темной теме уменьшаем свечение тени, чтобы оно не выглядело "грязным"
+          shadowColor: colors.primary,
+          shadowOpacity: dark ? 0.5 : 0.3,
+        }
+      ]} 
       onPress={onPress} 
       activeOpacity={0.8}
     >
-      <Text style={styles.text}>+</Text>
+      <Text style={[styles.text, { color: colors.staticWhite }]}>+</Text>
     </TouchableOpacity>
   );
 };
@@ -21,31 +34,29 @@ export const FloatingButton = ({ onPress }: Props) => {
 const styles = StyleSheet.create({
   button: {
     position: 'absolute',
+    // Используем значения из твоего spacing.ts
     bottom: spacing.xl,
     right: spacing.xl,
     width: 60,
     height: 60,
-    // Используем твой константный радиус для круга
     borderRadius: borderRadius.full, 
-    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     
+    // Слой над контентом
+    zIndex: 99,
+
     // Тень для Android
     elevation: 6,
     
-    // Тень для iOS (используем цвет текста для мягкой тени)
-    shadowColor: theme.colors.primary,
+    // Тень для iOS
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
     shadowRadius: 6,
   },
   text: {
-    // Белый цвет из палитры через тему (или напрямую, если в теме нет white)
-    color: theme.colors.staticWhite , 
     fontSize: 32,
     fontWeight: '300',
-    // Небольшая корректировка для визуальной центровки плюса
+    // Центровка "+" (на iOS символы часто смещены вверх)
     marginTop: Platform.OS === 'ios' ? -4 : -2,
   },
 });

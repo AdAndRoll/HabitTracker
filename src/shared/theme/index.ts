@@ -1,8 +1,7 @@
-import { lightTheme, darkTheme } from './colors';
+import { lightTheme, darkTheme, type AppTheme } from './colors'; // Добавили импорт типа
 import { spacing, borderRadius } from './spacing';
 
+// Экспортируем тип AppTheme, чтобы его можно было импортировать в компонентах
+export { lightTheme, darkTheme, spacing, borderRadius, type AppTheme };
 
-export { lightTheme, darkTheme, spacing, borderRadius };
-
-// Можно также экспортировать "текущую" тему (пока захардкодим светлую)
 export const theme = lightTheme;

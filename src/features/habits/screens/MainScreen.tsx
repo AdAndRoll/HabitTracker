@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, FlatList, SafeAreaView, View, Text, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useTheme } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Header, HabitCard, FloatingButton, FilterTabs } from '../../../shared/components';
-import { theme, spacing } from '../../../shared/theme';
+// Импортируем только константы и типы, цвета берем из хука
+import { spacing, type AppTheme } from '../../../shared/theme';
 import { RootStackParamList } from '../../../navigation/types';
 
 // Hooks
@@ -16,8 +17,8 @@ import { NotificationService } from '../services/NotificationService';
 
 export const MainScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { colors } = useTheme() as AppTheme; // Подключаем динамические цвета
   
-  // Данные и состояние фильтрации
   const { 
     habits, 
     selectedDate, 
@@ -29,10 +30,8 @@ export const MainScreen = () => {
     setFilter 
   } = useHabits();
 
-  // Бизнес-логика (действия)
   const { setHabitReminder, deleteHabit } = useHabitActions();
 
-  // Инициализация сервисов при монтировании
   useEffect(() => {
     const initNotifications = async () => {
       try {
@@ -44,9 +43,6 @@ export const MainScreen = () => {
     initNotifications();
   }, []);
 
-  /**
-   * Обработка установки напоминания
-   */
   const handleSetReminder = async (id: string, title: string, hour: number, minute: number) => {
     try {
       await setHabitReminder(id, title, hour, minute);
@@ -55,9 +51,6 @@ export const MainScreen = () => {
     }
   };
 
-  /**
-   * Подтверждение удаления
-   */
   const confirmDelete = (id: string, title: string) => {
     Alert.alert(
       'Удаление',
@@ -73,9 +66,6 @@ export const MainScreen = () => {
     );
   };
 
-  /**
-   * Переключение статуса привычки
-   */
   const handleToggle = (id: string) => {
     if (isFuture) {
       Alert.alert('Рановато!', 'Нельзя отмечать привычки на будущие даты ⏳');
@@ -96,14 +86,14 @@ export const MainScreen = () => {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>{filter === 'completed' ? '⏳' : '🌿'}</Text>
-        <Text style={styles.emptyTitle}>Список пуст</Text>
-        <Text style={styles.emptySubtitle}>{getMessage()}</Text>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>Список пуст</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>{getMessage()}</Text>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header 
         selectedDate={selectedDate} 
         onDateChange={setSelectedDate} 
@@ -148,7 +138,6 @@ export const MainScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   filterWrapper: {
     paddingHorizontal: spacing.md,
@@ -173,12 +162,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: theme.colors.text,
     marginBottom: spacing.sm,
   },
   emptySubtitle: {
     textAlign: 'center',
-    color: theme.colors.textSecondary,
     fontSize: 16,
     lineHeight: 24,
   },

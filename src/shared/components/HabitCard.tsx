@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Vibration, Platform } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useTheme } from '@react-navigation/native';
 
 import { Habit } from '../../core';
-import { theme, spacing, borderRadius } from '../theme';
+// Импортируем токены и тип из единого индекса темы
+import { spacing, borderRadius, type AppTheme } from '../theme';
 
 interface Props {
   habit: Habit;
@@ -14,7 +16,6 @@ interface Props {
   onLongPress: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  // Новый колбэк для передачи выбранного времени родителю
   onSetReminder: (hour: number, minute: number) => void;
 }
 
@@ -29,6 +30,7 @@ export const HabitCard = ({
   onDelete,
   onSetReminder 
 }: Props) => {
+  const { colors, dark } = useTheme() as AppTheme;
   const [showPicker, setShowPicker] = useState(false);
 
   const handleToggle = () => {
@@ -40,24 +42,27 @@ export const HabitCard = ({
 
   const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowPicker(false);
-    
     if (event.type === 'set' && selectedDate) {
-      const hour = selectedDate.getHours();
-      const minute = selectedDate.getMinutes();
-      
-      // Просто пробрасываем данные вверх, не заботясь о логике сохранения
-      onSetReminder(hour, minute);
+      onSetReminder(selectedDate.getHours(), selectedDate.getMinutes());
     }
   };
 
-  const colorString = habit.color || '#000000';
-  const iconBgColor = colorString.startsWith('#') ? colorString + '15' : 'rgba(0,0,0,0.1)';
+  const colorString = habit.color || colors.primary;
+  // Фон иконки теперь автоматически адаптируется (прозрачность чуть выше в темной теме для сочности)
+  const iconBgOpacity = dark ? '40' : '15'; 
+  const iconBgColor = `${colorString}${iconBgOpacity}`;
 
   return (
     <View style={[
       styles.card, 
-      { borderLeftColor: colorString },
-      (isCompleted || isFuture) ? styles.completedCard : null
+      { 
+        backgroundColor: colors.surface, 
+        borderLeftColor: colorString,
+        // Тонкий бордер только в темной теме для разделения карточек
+        borderWidth: dark ? 1 : 0,
+        borderColor: colors.border
+      },
+      (isCompleted || isFuture) && { opacity: colors.completedOpacity }
     ]}>
       
       <TouchableOpacity 
@@ -74,44 +79,44 @@ export const HabitCard = ({
         </View>
 
         <View style={styles.info}>
-          <Text numberOfLines={1} style={[styles.title, isCompleted ? styles.completedTitle : null]}>
+          <Text 
+            numberOfLines={1} 
+            style={[
+              styles.title, 
+              { color: colors.text },
+              isCompleted && { color: colors.textSecondary, textDecorationLine: 'line-through' }
+            ]}
+          >
             {habit.title}
           </Text>
           <View style={styles.statusRow}>
-            <Text style={styles.statusText}>
+            <Text style={[
+              styles.statusText, 
+              { color: isCompleted ? colors.textSecondary : colors.textMuted }
+            ]}>
               {isFuture ? '⏳ Ожидание' : (isCompleted ? '🔥 Выполнено!' : '🎯 Нажми, чтобы отметить')}
             </Text>
             {habit.isReminderEnabled && (
-              <Text style={styles.reminderBadge}> • 🔔 {habit.reminderTime}</Text>
+              <Text style={[styles.reminderBadge, { color: colors.primary }]}>
+                {' '}• 🔔 {habit.reminderTime}
+              </Text>
             )}
           </View>
         </View>
       </TouchableOpacity>
 
       <View style={styles.actions}>
-        <TouchableOpacity 
-          onPress={() => setShowPicker(true)} 
-          style={styles.actionBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
-        >
+        <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.actionBtn}>
           <Text style={[styles.actionIcon, !habit.isReminderEnabled && { opacity: 0.3 }]}>
             {habit.isReminderEnabled ? '🔔' : '🔕'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          onPress={onEdit} 
-          style={styles.actionBtn} 
-          hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
-        >
+        <TouchableOpacity onPress={onEdit} style={styles.actionBtn}>
           <Text style={styles.actionIcon}>✏️</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          onPress={onDelete} 
-          style={styles.actionBtn} 
-          hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }}
-        >
+        <TouchableOpacity onPress={onDelete} style={styles.actionBtn}>
           <Text style={[styles.actionIcon, { opacity: 0.4 }]}>🗑️</Text>
         </TouchableOpacity>
       </View>
@@ -123,6 +128,7 @@ export const HabitCard = ({
           is24Hour={true}
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={handleTimeChange}
+          textColor={dark ? colors.staticWhite : colors.text}
         />
       )}
     </View>
@@ -131,22 +137,19 @@ export const HabitCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
     borderRadius: borderRadius.lg,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
     borderLeftWidth: 5,
     height: 80,
+    // Статичные тени (в темной теме их "поддержит" бордер)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
     overflow: 'hidden',
-  },
-  completedCard: {
-    opacity: 0.85,
   },
   mainTouchable: {
     flex: 1,
@@ -176,19 +179,12 @@ const styles = StyleSheet.create({
   title: { 
     fontSize: 16, 
     fontWeight: '700', 
-    color: theme.colors.text 
-  },
-  completedTitle: { 
-    textDecorationLine: 'line-through', 
-    color: theme.colors.textSecondary 
   },
   statusText: { 
     fontSize: 11, 
-    color: theme.colors.textSecondary, 
   },
   reminderBadge: {
     fontSize: 11,
-    color: theme.colors.primary,
     fontWeight: '600',
   },
   actions: {
