@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, FlatList, SafeAreaView, View, Text, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// 1. Добавляем FilterTabs в импорт
 import { Header, HabitCard, FloatingButton, FilterTabs } from '../../../shared/components';
 import { theme, spacing } from '../../../shared/theme';
 import { useHabits } from '../hooks/useHabits';
 import { RootStackParamList } from '../../../navigation/types';
+import { NotificationService } from '../services/NotificationService'; // Импортируем наш сервис
 
 export const MainScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -20,10 +20,22 @@ export const MainScreen = () => {
     removeHabit,
     isToday,
     isFuture,
-    // 2. Извлекаем новые поля из хука
     filter,
     setFilter 
   } = useHabits();
+
+  // Инициализация уведомлений при первом запуске экрана
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        await NotificationService.initialize();
+      } catch (error) {
+        console.error('Ошибка инициализации уведомлений:', error);
+      }
+    };
+
+    initNotifications();
+  }, []);
 
   const confirmDelete = (id: string, title: string) => {
     Alert.alert(
@@ -48,7 +60,6 @@ export const MainScreen = () => {
     toggleHabit(id);
   };
 
-  // Улучшенный пустой список, который реагирует на выбранный фильтр
   const ListEmptyComponent = () => {
     const getMessage = () => {
       switch (filter) {
@@ -74,7 +85,6 @@ export const MainScreen = () => {
         onDateChange={setSelectedDate} 
       />
 
-      {/* 3. Добавляем переключатель фильтров */}
       <View style={styles.filterWrapper}>
         <FilterTabs activeFilter={filter} onChange={setFilter} />
       </View>
@@ -115,7 +125,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  // Добавляем отступ для обертки фильтров
   filterWrapper: {
     paddingHorizontal: spacing.md,
     marginTop: spacing.sm,
@@ -127,7 +136,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    paddingTop: 80, // Немного подняли, чтобы влезло с табами
+    paddingTop: 80,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,

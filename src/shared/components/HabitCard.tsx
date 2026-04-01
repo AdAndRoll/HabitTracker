@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Vibration, Platform } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+
 import { Habit } from '../../core';
 import { theme, spacing, borderRadius } from '../theme';
+import { useHabitStore } from '../../store/useHabitStore';
+import { NotificationService } from '../../features/habits/services/NotificationService';
 
 interface Props {
   habit: Habit;
@@ -17,21 +21,37 @@ interface Props {
 export const HabitCard = ({ 
   habit, isCompleted, isToday, isFuture, onToggle, onLongPress, onEdit, onDelete 
 }: Props) => {
+  const [showPicker, setShowPicker] = useState(false);
+  const updateReminder = useHabitStore((state) => state.updateReminder);
 
   const handleToggle = () => {
-    // УБИРАЕМ ЗДЕСЬ if (isFuture) return;
-    // Пусть проверку делает MainScreen, чтобы показать Alert
-    
     if (Platform.OS !== 'web') {
-      try {
-        Vibration.vibrate(10); 
-      } catch (err) {}
+      try { Vibration.vibrate(10); } catch (err) {}
     }
-    
     onToggle();
   };
 
-  // Вычисляем цвет заранее, чтобы не ломать парсер Hermes интерполяцией в стилях
+  const handleTimeChange = async (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowPicker(false);
+    
+    if (event.type === 'set' && selectedDate) {
+      const hour = selectedDate.getHours();
+      const minute = selectedDate.getMinutes();
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      
+      // 1. Сохраняем в локальный стор
+      updateReminder(habit.id, timeString);
+      
+      // 2. Планируем уведомление в ОС
+      await NotificationService.scheduleHabitReminder(
+        habit.id,
+        habit.title,
+        hour,
+        minute
+      );
+    }
+  };
+
   const colorString = habit.color || '#000000';
   const iconBgColor = colorString.startsWith('#') ? colorString + '15' : 'rgba(0,0,0,0.1)';
 
@@ -59,17 +79,33 @@ export const HabitCard = ({
           <Text numberOfLines={1} style={[styles.title, isCompleted ? styles.completedTitle : null]}>
             {habit.title}
           </Text>
-          <Text style={styles.statusText}>
-            {isFuture ? '⏳ Ожидание' : (isCompleted ? '🔥 Выполнено!' : '🎯 Нажми, чтобы отметить')}
-          </Text>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusText}>
+              {isFuture ? '⏳ Ожидание' : (isCompleted ? '🔥 Выполнено!' : '🎯 Нажми, чтобы отметить')}
+            </Text>
+            {habit.isReminderEnabled && (
+              <Text style={styles.reminderBadge}> • 🔔 {habit.reminderTime}</Text>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
 
       <View style={styles.actions}>
+        {/* Колокольчик для уведомлений */}
+        <TouchableOpacity 
+          onPress={() => setShowPicker(true)} 
+          style={styles.actionBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+        >
+          <Text style={[styles.actionIcon, !habit.isReminderEnabled && { opacity: 0.3 }]}>
+            {habit.isReminderEnabled ? '🔔' : '🔕'}
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity 
           onPress={onEdit} 
           style={styles.actionBtn} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
         >
           <Text style={styles.actionIcon}>✏️</Text>
         </TouchableOpacity>
@@ -77,11 +113,21 @@ export const HabitCard = ({
         <TouchableOpacity 
           onPress={onDelete} 
           style={styles.actionBtn} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }}
         >
           <Text style={[styles.actionIcon, { opacity: 0.4 }]}>🗑️</Text>
         </TouchableOpacity>
       </View>
+
+      {showPicker && (
+        <DateTimePicker
+          value={new Date()}
+          mode="time"
+          is24Hour={true}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+        />
+      )}
     </View>
   );
 };
@@ -124,6 +170,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   emoji: { fontSize: 24 },
   completedEmoji: { fontSize: 20 },
   title: { 
@@ -138,16 +188,21 @@ const styles = StyleSheet.create({
   statusText: { 
     fontSize: 11, 
     color: theme.colors.textSecondary, 
-    marginTop: 2 
+  },
+  reminderBadge: {
+    fontSize: 11,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',
-    paddingRight: spacing.sm,
+    paddingRight: 4,
     height: '100%',
     alignItems: 'center',
   },
   actionBtn: {
-    padding: spacing.sm,
+    paddingHorizontal: 6,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },

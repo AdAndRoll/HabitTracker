@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { clientStorage, Habit } from '../core';
+import { NotificationService } from '../features/habits/services/NotificationService';
 
+// Обновляем тип HabitUpdate, чтобы он включал настройки уведомлений
 type HabitUpdate = Partial<Omit<Habit, 'id' | 'createdAt' | 'completedDays'>>;
 
 interface HabitState {
@@ -10,11 +12,13 @@ interface HabitState {
   removeHabit: (id: string) => void;
   toggleHabit: (id: string, date: string) => void;
   updateHabit: (id: string, updates: HabitUpdate) => void;
+  // Новый метод для быстрой настройки уведомлений
+  updateReminder: (id: string, time: string | null) => void;
 }
 
 export const useHabitStore = create<HabitState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       habits: [],
 
       addHabit: (title, emoji, color, description) => {
@@ -27,11 +31,12 @@ export const useHabitStore = create<HabitState>()(
             {
               id: Date.now().toString(),
               title: trimmedTitle,
-              description: description?.trim(),
+              description: description ? description.trim() : undefined,
               emoji: emoji,
               color: color,
               completedDays: [],
               createdAt: Date.now(),
+              isReminderEnabled: false, // по умолчанию выключено
             },
           ],
         }));
@@ -45,7 +50,24 @@ export const useHabitStore = create<HabitState>()(
         }));
       },
 
+      updateReminder: (id, time) => {
+        set((state) => ({
+          habits: state.habits.map((h) =>
+            h.id === id 
+              ? { 
+                  ...h, 
+                  reminderTime: time || undefined, 
+                  isReminderEnabled: !!time 
+                } 
+              : h
+          ),
+        }));
+      },
+
       removeHabit: (id) => {
+        // При удалении привычки — отменяем её уведомление в системе
+        NotificationService.cancelHabitReminder(id);
+        
         set((state) => ({
           habits: state.habits.filter((h) => h.id !== id),
         }));
