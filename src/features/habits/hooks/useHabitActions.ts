@@ -73,7 +73,7 @@ export const useHabitActions = () => {
     habits, 
     createNewHabit,
     editExistingHabit,
-    toggleHabit, // Экспортируем новый метод
+    toggleHabit,
     setHabitReminder,
     deleteHabit,
   };
